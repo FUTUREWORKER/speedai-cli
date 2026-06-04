@@ -1,0 +1,10 @@
+AGENTS.md
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+credentials.json
+config.json
+generated-images/
+
