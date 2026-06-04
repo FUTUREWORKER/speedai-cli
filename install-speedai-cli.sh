@@ -12,12 +12,8 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 
 SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_PATH")" >/dev/null 2>&1 && pwd)"
-CLI_SCRIPT="$SCRIPT_DIR/speedai_cli.py"
-
-if [ ! -f "$CLI_SCRIPT" ]; then
-  echo "speedai_cli.py not found: $CLI_SCRIPT" >&2
-  exit 1
-fi
+LOCAL_CLI_SCRIPT="$SCRIPT_DIR/speedai_cli.py"
+RAW_BASE="${SPEEDAI_CLI_RAW_BASE:-https://raw.githubusercontent.com/FUTUREWORKER/speedai-cli/main}"
 
 PYTHON_BIN="${PYTHON_BIN:-}"
 if [ -z "$PYTHON_BIN" ]; then
@@ -31,8 +27,25 @@ if [ -z "$PYTHON_BIN" ]; then
   fi
 fi
 
-INSTALL_DIR="${SPEEDAI_CLI_INSTALL_DIR:-$HOME/.speed-ai/bin}"
+INSTALL_ROOT="${SPEEDAI_CLI_HOME:-$HOME/.speed-ai}"
+INSTALL_DIR="${SPEEDAI_CLI_INSTALL_DIR:-$INSTALL_ROOT/bin}"
+LIB_DIR="$INSTALL_ROOT/lib"
 mkdir -p "$INSTALL_DIR"
+mkdir -p "$LIB_DIR"
+
+CLI_SCRIPT="$LIB_DIR/speedai_cli.py"
+if [ -f "$LOCAL_CLI_SCRIPT" ]; then
+  cp "$LOCAL_CLI_SCRIPT" "$CLI_SCRIPT"
+else
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$RAW_BASE/speedai_cli.py" -o "$CLI_SCRIPT"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$CLI_SCRIPT" "$RAW_BASE/speedai_cli.py"
+  else
+    echo "curl or wget is required to download speedai_cli.py." >&2
+    exit 1
+  fi
+fi
 
 SPEEDAI_BIN="$INSTALL_DIR/speedai"
 cat > "$SPEEDAI_BIN" <<EOF

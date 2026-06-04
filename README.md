@@ -9,13 +9,13 @@ CLI 不直接调用上游图片模型供应商。它会使用用户授权后的�
 Windows PowerShell：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File D:\speedai-cli\install-speedai-cli.ps1
+irm https://raw.githubusercontent.com/FUTUREWORKER/speedai-cli/main/install-speedai-cli.ps1 | iex
 ```
 
 macOS / Linux：
 
 ```bash
-bash /path/to/speedai-cli/install-speedai-cli.sh
+curl -fsSL https://raw.githubusercontent.com/FUTUREWORKER/speedai-cli/main/install-speedai-cli.sh | bash
 ```
 
 安装后重新打开终端，验证命令：
@@ -40,7 +40,13 @@ CLI 负责执行命令；Agent Skill 负责告诉 Codex、OpenClaw、Hermes 等 
 skills/gpt-image-2-image-generation
 ```
 
-不同 Agent 的 skill 目录约定可能不同。把上面的目录复制到对应 Agent 的本地 skills 目录即可。
+如果你的 Agent 支持 `skills` CLI，可以使用类似 libtv 的安装方式：
+
+```bash
+npx -y skills add FUTUREWORKER/speedai-cli --skill gpt-image-2-image-generation
+```
+
+不同 Agent 的 skill 目录约定可能不同。如果不支持 `skills` CLI，把上面的目录复制到对应 Agent 的本地 skills/instruction 目录即可。
 
 Codex 示例，Windows PowerShell：
 

@@ -1,14 +1,21 @@
 $ErrorActionPreference = 'Stop'
 
-$ScriptDir = Split-Path -Parent $PSCommandPath
-$CliScript = Join-Path $ScriptDir 'speedai_cli.py'
-if (-not (Test-Path -LiteralPath $CliScript -PathType Leaf)) {
-  Write-Error "speedai_cli.py not found: $CliScript"
-  exit 1
-}
+$RepoRawBase = if ($env:SPEEDAI_CLI_RAW_BASE) { $env:SPEEDAI_CLI_RAW_BASE.TrimEnd('/') } else { 'https://raw.githubusercontent.com/FUTUREWORKER/speedai-cli/main' }
+$ScriptDir = if ($PSCommandPath) { Split-Path -Parent $PSCommandPath } else { '' }
+$LocalCliScript = if ($ScriptDir) { Join-Path $ScriptDir 'speedai_cli.py' } else { '' }
 
-$InstallDir = if ($env:SPEEDAI_CLI_INSTALL_DIR) { $env:SPEEDAI_CLI_INSTALL_DIR } else { Join-Path $env:USERPROFILE '.speed-ai\bin' }
+$InstallRoot = if ($env:SPEEDAI_CLI_HOME) { $env:SPEEDAI_CLI_HOME } else { Join-Path $env:USERPROFILE '.speed-ai' }
+$InstallDir = if ($env:SPEEDAI_CLI_INSTALL_DIR) { $env:SPEEDAI_CLI_INSTALL_DIR } else { Join-Path $InstallRoot 'bin' }
+$LibDir = Join-Path $InstallRoot 'lib'
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+New-Item -ItemType Directory -Path $LibDir -Force | Out-Null
+
+$CliScript = Join-Path $LibDir 'speedai_cli.py'
+if ($LocalCliScript -and (Test-Path -LiteralPath $LocalCliScript -PathType Leaf)) {
+  Copy-Item -LiteralPath $LocalCliScript -Destination $CliScript -Force
+} else {
+  Invoke-WebRequest -UseBasicParsing -Uri "$RepoRawBase/speedai_cli.py" -OutFile $CliScript
+}
 
 $CmdPath = Join-Path $InstallDir 'speedai.cmd'
 $Ps1Path = Join-Path $InstallDir 'speedai.ps1'
