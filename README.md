@@ -30,6 +30,36 @@ speedai --help
 $env:Path = "$env:USERPROFILE\.speed-ai\bin;$env:Path"
 ```
 
+## 安装 Agent Skill
+
+CLI 负责执行命令；Agent Skill 负责告诉 Codex、OpenClaw、Hermes 等 Agent 什么时候、如何调用 `speedai`。
+
+本仓库内置 Skill：
+
+```text
+skills/gpt-image-2-image-generation
+```
+
+不同 Agent 的 skill 目录约定可能不同。把上面的目录复制到对应 Agent 的本地 skills 目录即可。
+
+Codex 示例，Windows PowerShell：
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.codex\skills" | Out-Null
+Copy-Item -Recurse -Force ".\skills\gpt-image-2-image-generation" "$env:USERPROFILE\.codex\skills\"
+```
+
+Codex 示例，macOS / Linux：
+
+```bash
+mkdir -p ~/.codex/skills
+cp -R ./skills/gpt-image-2-image-generation ~/.codex/skills/
+```
+
+OpenClaw、Hermes 或其他 Agent 使用时，请复制 `skills/gpt-image-2-image-generation` 到对应 Agent 的 skill/instruction 目录，并保持目录内 `SKILL.md` 文件不变。
+
+安装后，Agent 看到图片生成需求时应优先调用 `speedai` CLI，而不是直连模型供应商。
+
 ## 授权登录
 
 发起网页登录授权：
@@ -205,9 +235,9 @@ $env:SPEEDAI_OUTPUT_DIR="D:\speed-ai\generated-images"
 
 注意：授权 token 和授权时的 API 地址绑定。切换环境后需要重新执行 `speedai login web --open`。
 
-## 与 Skill 的关系
+## 与 Agent Skill 的关系
 
-当前 Codex skill 名称：
+当前通用 Agent Skill 名称：
 
 ```text
 gpt-image-2-image-generation
