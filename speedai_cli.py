@@ -30,7 +30,7 @@ def parse_args():
     login_sub = login.add_subparsers(dest="login_command", required=True)
     login_web = login_sub.add_parser("web")
     login_web.add_argument("--open", action="store_true", help="Open the authorization URL in the default browser.")
-    login_web.add_argument("--client-name", default="Codex CLI")
+    login_web.add_argument("--client-name", default="Speed AI CLI")
     login_web.add_argument("--poll-interval", type=float, default=2.0)
 
     subparsers.add_parser("logout")
@@ -61,6 +61,50 @@ def parse_args():
     generate.add_argument("--poll-interval", type=float, default=3.0)
     generate.add_argument("--timeout", type=int, default=600)
     generate.add_argument("--output-dir", default="")
+
+    voice = subparsers.add_parser("voice")
+    voice_sub = voice.add_subparsers(dest="voice_command", required=True)
+    voice_sub.add_parser("list")
+    voice_clone = voice_sub.add_parser("clone")
+    voice_clone.add_argument("--audio", required=True)
+    voice_clone.add_argument("--prefix", default="我的音色")
+    voice_clone.add_argument("--sex", type=int, default=0)
+    voice_clone.add_argument("--language", default="")
+
+    audio = subparsers.add_parser("audio")
+    audio_sub = audio.add_subparsers(dest="audio_command", required=True)
+    synthesize = audio_sub.add_parser("synthesize")
+    synthesize.add_argument("--text", required=True)
+    synthesize.add_argument("--voice-record-id", required=True)
+    synthesize.add_argument("--language", default="")
+    synthesize.add_argument("--speech-rate", type=float, default=0)
+    synthesize.add_argument("--pitch-rate", type=float, default=0)
+    synthesize.add_argument("--volume", type=float, default=50)
+    synthesize.add_argument("--prompt", default="")
+    synthesize.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
+    synthesize.add_argument("--poll-interval", type=float, default=3.0)
+    synthesize.add_argument("--timeout", type=int, default=600)
+    synthesize.add_argument("--output-dir", default="")
+
+    human = subparsers.add_parser("digital-human")
+    human_sub = human.add_subparsers(dest="human_command", required=True)
+    human_generate = human_sub.add_parser("generate")
+    human_generate.add_argument("--image", required=True)
+    human_generate.add_argument("--text", required=True)
+    human_generate.add_argument("--voice-record-id", required=True)
+    human_generate.add_argument("--audio-url", required=True)
+    human_generate.add_argument("--audio-duration", type=float, required=True)
+    human_generate.add_argument("--language", default="")
+    human_generate.add_argument("--speech-rate", type=float, default=0)
+    human_generate.add_argument("--pitch-rate", type=float, default=0)
+    human_generate.add_argument("--volume", type=float, default=50)
+    human_generate.add_argument("--model", default="")
+    human_generate.add_argument("--prompt", default="")
+    human_generate.add_argument("--video-prompt", default="")
+    human_generate.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
+    human_generate.add_argument("--poll-interval", type=float, default=5.0)
+    human_generate.add_argument("--timeout", type=int, default=1200)
+    human_generate.add_argument("--output-dir", default="")
 
     return parser.parse_args()
 
@@ -291,6 +335,23 @@ def download_record(api_base, token, record_id, output_dir):
         return str(target)
 
 
+def download_url(url, output_dir, filename):
+    output_path = Path(output_dir).expanduser().resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(request, timeout=300) as response:
+        content_type = response.headers.get("content-type", "").split(";")[0]
+        extension = mimetypes.guess_extension(content_type) or Path(urllib.parse.urlparse(url).path).suffix or ""
+        target = output_path / f"{filename}{extension}"
+        target.write_bytes(response.read())
+        return str(target)
+
+
+def get_cli_credentials():
+    credentials = load_credentials()
+    return normalize_base(credentials.get("api_base") or DEFAULT_API_BASE), credentials["token"]
+
+
 def image_generate(args):
     credentials = load_credentials()
     config = load_config()
@@ -329,6 +390,111 @@ def image_generate(args):
     raise RuntimeError(f"Timed out waiting for image generation record: {record_id}")
 
 
+def voice_list(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/digital-human/bootstrap", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def voice_clone(args):
+    api_base, token = get_cli_credentials()
+    fields = [
+        ("prefix", args.prefix),
+        ("sex", args.sex),
+    ]
+    if args.language:
+        fields.append(("language", args.language))
+    _, payload = request_multipart(
+        f"{api_base}/api/h5/digital-human/voices/clone",
+        fields,
+        [("audio", args.audio)],
+        token,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def audio_synthesize(args):
+    api_base, token = get_cli_credentials()
+    config = load_config()
+    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    fields = [
+        ("text", args.text),
+        ("voiceRecordId", args.voice_record_id),
+        ("volume", args.volume),
+        ("prompt", args.prompt),
+    ]
+    if args.language:
+        fields.append(("language", args.language))
+    if args.speech_rate:
+        fields.append(("speechRate", args.speech_rate))
+    if args.pitch_rate:
+        fields.append(("pitchRate", args.pitch_rate))
+    _, payload = request_multipart(f"{api_base}/api/h5/digital-human/audio", fields, [], token)
+    item = payload.get("item", {})
+    task_id = item.get("id", "")
+    if not args.wait or not task_id:
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        _, detail = request_json("GET", f"{api_base}/api/h5/digital-human/audio/{urllib.parse.quote(task_id)}", token=token)
+        item = detail.get("item", {})
+        if item.get("status") in ("succeeded", "failed"):
+            result = {"item": item}
+            if item.get("status") == "succeeded" and output_dir and item.get("audioUrl"):
+                result["downloadedPath"] = download_url(item["audioUrl"], output_dir, task_id)
+            print(json.dumps(result, ensure_ascii=False))
+            return
+        time.sleep(max(1.0, args.poll_interval))
+    raise RuntimeError(f"Timed out waiting for audio task: {task_id}")
+
+
+def digital_human_generate(args):
+    api_base, token = get_cli_credentials()
+    config = load_config()
+    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    fields = [
+        ("text", args.text),
+        ("voiceRecordId", args.voice_record_id),
+        ("audioUrl", args.audio_url),
+        ("audioDuration", args.audio_duration),
+        ("volume", args.volume),
+        ("prompt", args.prompt),
+        ("videoPrompt", args.video_prompt),
+    ]
+    if args.language:
+        fields.append(("language", args.language))
+    if args.speech_rate:
+        fields.append(("speechRate", args.speech_rate))
+    if args.pitch_rate:
+        fields.append(("pitchRate", args.pitch_rate))
+    if args.model:
+        fields.append(("model", args.model))
+    _, payload = request_multipart(
+        f"{api_base}/api/h5/digital-human/tasks",
+        fields,
+        [("image", args.image)],
+        token,
+    )
+    item = payload.get("item", {})
+    task_id = item.get("id", "")
+    if not args.wait or not task_id:
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        _, detail = request_json("GET", f"{api_base}/api/h5/digital-human/tasks/{urllib.parse.quote(task_id)}", token=token)
+        item = detail.get("item", {})
+        if item.get("status") in ("succeeded", "failed"):
+            result = {"item": item}
+            if item.get("status") == "succeeded" and output_dir and item.get("videoUrl"):
+                result["downloadedPath"] = download_url(item["videoUrl"], output_dir, task_id)
+            print(json.dumps(result, ensure_ascii=False))
+            return
+        time.sleep(max(1.0, args.poll_interval))
+    raise RuntimeError(f"Timed out waiting for digital human task: {task_id}")
+
+
 def main():
     args = parse_args()
     if args.command == "login" and args.login_command == "web":
@@ -347,6 +513,14 @@ def main():
         config_unset(args)
     elif args.command == "image" and args.image_command == "generate":
         image_generate(args)
+    elif args.command == "voice" and args.voice_command == "list":
+        voice_list(args)
+    elif args.command == "voice" and args.voice_command == "clone":
+        voice_clone(args)
+    elif args.command == "audio" and args.audio_command == "synthesize":
+        audio_synthesize(args)
+    elif args.command == "digital-human" and args.human_command == "generate":
+        digital_human_generate(args)
     else:
         raise RuntimeError("Unsupported command")
 

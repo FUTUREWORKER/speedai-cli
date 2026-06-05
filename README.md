@@ -66,12 +66,20 @@ CLI 负责执行命令；Agent Skill 负责告诉 Codex、OpenClaw、Hermes 等 
 
 ```text
 skills/gpt-image-2-image-generation
+skills/speedai-voice-clone
+skills/speedai-voice-list
+skills/speedai-audio-synthesis
+skills/speedai-digital-human-video
 ```
 
 如果你的 Agent 支持 `skills` CLI，可以使用类似 libtv 的安装方式：
 
 ```bash
 npx -y skills add FUTUREWORKER/speedai-cli --skill gpt-image-2-image-generation
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-voice-clone
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-voice-list
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-audio-synthesis
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-digital-human-video
 ```
 
 不同 Agent 的 skill 目录约定可能不同。如果不支持 `skills` CLI，把上面的目录复制到对应 Agent 的本地 skills/instruction 目录即可。
@@ -90,7 +98,7 @@ mkdir -p ~/.codex/skills
 cp -R ./skills/gpt-image-2-image-generation ~/.codex/skills/
 ```
 
-OpenClaw、Hermes 或其他 Agent 使用时，请复制 `skills/gpt-image-2-image-generation` 到对应 Agent 的 skill/instruction 目录，并保持目录内 `SKILL.md` 文件不变。
+OpenClaw、Hermes 或其他 Agent 使用时，请复制 `skills/` 下需要的 skill 目录到对应 Agent 的 skill/instruction 目录，并保持目录内 `SKILL.md` 文件不变。
 
 安装后，Agent 看到图片生成需求时应优先调用 `speedai` CLI，而不是直连模型供应商。
 
@@ -161,6 +169,58 @@ speedai image generate `
 ```
 
 生成成功后，记录会出现在用户 H5 创作历史中。
+
+## 声音克隆
+
+```bash
+speedai voice clone --audio /path/to/sample.wav --prefix "我的音色" --language zh
+```
+
+返回的 `item.id` 是系统内的音色记录 ID，后续声音合成和数字人视频合成都使用它作为 `--voice-record-id`。
+
+## 音色查询
+
+```bash
+speedai voice list
+```
+
+常用字段：
+
+- `voices[].id`：系统音色记录 ID
+- `voices[].voiceName`：音色名称
+- `voices[].voiceId`：供应商音色 ID
+- `voices[].cloneStatus`：克隆状态
+
+## 声音合成
+
+```bash
+speedai audio synthesize \
+  --text "大家好，欢迎来到极速 AI。" \
+  --voice-record-id <voice-record-id> \
+  --language zh \
+  --speech-rate 1 \
+  --pitch-rate 1 \
+  --volume 50 \
+  --output-dir ./generated-audio
+```
+
+生成数字人视频前，通常需要先用这个命令生成音频，并记录返回的 `audioUrl` 和 `audioDuration`。
+
+## 数字人视频合成
+
+```bash
+speedai digital-human generate \
+  --image /path/to/portrait.png \
+  --text "大家好，欢迎来到极速 AI。" \
+  --voice-record-id <voice-record-id> \
+  --audio-url <audio-url> \
+  --audio-duration 12.3 \
+  --language zh \
+  --model XPro1.0 \
+  --output-dir ./generated-videos
+```
+
+`--audio-url` 和 `--audio-duration` 通常来自 `speedai audio synthesize` 的返回结果。生成成功后，视频会进入用户 H5 创作历史。
 
 ## 下载目录
 
@@ -275,6 +335,10 @@ $env:SPEEDAI_OUTPUT_DIR="D:\speed-ai\generated-images"
 
 ```text
 gpt-image-2-image-generation
+speedai-voice-clone
+speedai-voice-list
+speedai-audio-synthesis
+speedai-digital-human-video
 ```
 
 这个 skill 的职责是告诉 Agent：需要生图时调用 `speedai` CLI，而不是直接调用上游 `gpt-image-2` 供应商接口。

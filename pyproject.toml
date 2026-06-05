@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedai-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "Speed AI CLI for user-authorized system image generation."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -29,3 +29,4 @@ speedai = "speedai_cli:main"
 
 [tool.setuptools]
 py-modules = ["speedai_cli"]
+include-package-data = true
