@@ -1,0 +1,32 @@
+{
+  "name": "speedai-cli",
+  "version": "0.1.0",
+  "description": "Speed AI CLI for user-authorized system image generation.",
+  "bin": {
+    "speedai": "bin/speedai.js"
+  },
+  "files": [
+    "bin/speedai.js",
+    "speedai_cli.py",
+    "skills/",
+    "README.md",
+    "install-speedai-cli.ps1",
+    "install-speedai-cli.sh"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FUTUREWORKER/speedai-cli.git"
+  },
+  "keywords": [
+    "speed-ai",
+    "speedai",
+    "cli",
+    "agent",
+    "image-generation"
+  ],
+  "license": "UNLICENSED",
+  "private": false,
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -2,14 +2,13 @@ AGENTS.md
 待解决问题.md
 __pycache__/
 *.pyc
-.DS_Store
+.git/
+.github/
 .env
 .env.*
 credentials.json
 config.json
 generated-images/
-node_modules/
 dist/
 build/
 *.egg-info/
-*.tgz

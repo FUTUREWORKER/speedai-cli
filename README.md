@@ -4,7 +4,29 @@ Speed AI CLI 用于让本地 Agent 通过命令行调用 Speed AI 系统的图�
 
 CLI 不直接调用上游图片模型供应商。它会使用用户授权后的系统 token 调用 Speed AI 后端，所以积分扣除、OSS 存储、任务队列、创作历史都和 H5 页面里的生图流程一致。
 
-## 安装
+## 安装 CLI
+
+推荐使用包管理器安装。当前 GitHub 仓库已经具备 npm 和 pip 安装形态，后续可继续发布到 npm registry、PyPI 和 Homebrew。
+
+npm：
+
+```bash
+npm install -g github:FUTUREWORKER/speedai-cli
+```
+
+pipx：
+
+```bash
+pipx install git+https://github.com/FUTUREWORKER/speedai-cli.git
+```
+
+pip：
+
+```bash
+pip install git+https://github.com/FUTUREWORKER/speedai-cli.git
+```
+
+如果不想使用包管理器，也可以使用安装脚本。
 
 Windows PowerShell：
 
@@ -28,6 +50,12 @@ speedai --help
 
 ```powershell
 $env:Path = "$env:USERPROFILE\.speed-ai\bin;$env:Path"
+```
+
+Homebrew 目前还没有发布 formula。后续可以新增 Homebrew tap 或提交 formula 后支持：
+
+```bash
+brew install speedai-cli
 ```
 
 ## 安装 Agent Skill
