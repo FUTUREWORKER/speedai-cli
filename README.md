@@ -73,6 +73,7 @@ skills/speedai-digital-human-video
 skills/speedai-video-wanx-2-7
 skills/speedai-video-seedance-2-0
 skills/speedai-video-happyhorse
+skills/speedai-long-video-creation
 ```
 
 如果你的 Agent 支持 `skills` CLI，可以使用类似 libtv 的安装方式：
@@ -86,6 +87,7 @@ npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-digital-human-video
 npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-video-wanx-2-7
 npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-video-seedance-2-0
 npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-video-happyhorse
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-long-video-creation
 ```
 
 不同 Agent 的 skill 目录约定可能不同。如果不支持 `skills` CLI，把上面的目录复制到对应 Agent 的本地 skills/instruction 目录即可。
@@ -221,6 +223,36 @@ speedai video generate \
 - `--first-frame`：图生视频首帧图片
 - `--reference-image`：参考图，可重复传入
 - `--reference-video`：参考视频，可重复传入；快乐马不使用视频参考
+- `--output-dir`：可选，本地下载目录
+
+## 长视频创作
+
+长视频创作会按系统流程创建项目、生成分镜、生成全部分镜视频并导出最终视频。生成结果会进入用户 H5 创作历史。
+
+```bash
+speedai long-video generate \
+  --prompt "制作一条 30 秒左右的产品发布长视频，参考图中的智能音箱作为主角，整体风格高级、科技感、镜头节奏流畅" \
+  --reference /path/to/reference.png \
+  --aspect-ratio 9:16 \
+  --output-dir ./generated-videos
+```
+
+带音色参考：
+
+```bash
+speedai long-video generate \
+  --prompt "制作一条口播风格的品牌介绍长视频，语气自信、节奏清晰，画面保持商务科技感" \
+  --reference /path/to/reference.mp4 \
+  --voice /path/to/voice.wav \
+  --aspect-ratio 16:9 \
+  --output-dir ./generated-videos
+```
+
+常用参数：
+- `--prompt`：整条长视频的主题、角色、风格、节奏和目标
+- `--reference`：参考图或参考视频文件，必填
+- `--voice`：可选，音色/声音参考文件
+- `--aspect-ratio`：`9:16` 或 `16:9`
 - `--output-dir`：可选，本地下载目录
 
 ## 声音克隆
@@ -395,6 +427,7 @@ speedai-digital-human-video
 speedai-video-wanx-2-7
 speedai-video-seedance-2-0
 speedai-video-happyhorse
+speedai-long-video-creation
 ```
 
 这些 skill 的职责是告诉 Agent：需要媒体创作时调用 `speedai` CLI，而不是直接调用上游模型供应商接口。

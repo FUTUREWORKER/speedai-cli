@@ -87,6 +87,21 @@ def parse_args():
     video_generate_parser.add_argument("--timeout", type=int, default=1800)
     video_generate_parser.add_argument("--output-dir", default="")
 
+    long_video = subparsers.add_parser("long-video")
+    long_video_sub = long_video.add_subparsers(dest="long_video_command", required=True)
+    long_video_generate_parser = long_video_sub.add_parser("generate")
+    long_video_generate_parser.add_argument("--prompt", required=True)
+    long_video_generate_parser.add_argument("--reference", required=True)
+    long_video_generate_parser.add_argument("--voice", default="")
+    long_video_generate_parser.add_argument("--aspect-ratio", default="9:16", choices=["9:16", "16:9"])
+    long_video_generate_parser.add_argument("--variant-key", default="")
+    long_video_generate_parser.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
+    long_video_generate_parser.add_argument("--poll-interval", type=float, default=8.0)
+    long_video_generate_parser.add_argument("--storyboard-timeout", type=int, default=600)
+    long_video_generate_parser.add_argument("--generation-timeout", type=int, default=3600)
+    long_video_generate_parser.add_argument("--export-timeout", type=int, default=900)
+    long_video_generate_parser.add_argument("--output-dir", default="")
+
     voice = subparsers.add_parser("voice")
     voice_sub = voice.add_subparsers(dest="voice_command", required=True)
     voice_sub.add_parser("list")
@@ -526,6 +541,80 @@ def video_generate(args):
     raise RuntimeError(f"Timed out waiting for video generation task: {task_id}")
 
 
+def long_video_project_failed(project):
+    return str(project.get("status", "")) == "failed" or any(
+        str(scene.get("status", "")) == "failed" for scene in project.get("scenes", [])
+    )
+
+
+def long_video_generate(args):
+    api_base, token = get_cli_credentials()
+    config = load_config()
+    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    _, bootstrap = request_json("GET", f"{api_base}/api/h5/long-video/bootstrap", token=token)
+    default_variant = (bootstrap.get("model", {}).get("defaultVariant") or {})
+    variant_key = args.variant_key or str(default_variant.get("variantKey", "") or "")
+
+    fields = [
+        ("prompt", args.prompt),
+        ("aspectRatio", args.aspect_ratio),
+    ]
+    if variant_key:
+        fields.append(("variantKey", variant_key))
+    files = [("referenceFile", args.reference)]
+    if args.voice:
+        files.append(("voiceFile", args.voice))
+
+    _, created = request_multipart(f"{api_base}/api/h5/long-videos", fields, files, token, timeout=300)
+    project = created.get("item", {})
+    project_id = str(project.get("id", "") or "")
+    if not project_id:
+        print(json.dumps(created, ensure_ascii=False))
+        return
+
+    _, storyboard_payload = request_json("POST", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}/storyboards", token=token)
+    if not args.wait:
+        print(json.dumps({"item": storyboard_payload.get("item", project)}, ensure_ascii=False))
+        return
+
+    deadline = time.time() + args.storyboard_timeout
+    while time.time() < deadline:
+        _, detail = request_json("GET", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}", token=token)
+        project = detail.get("item", {})
+        if long_video_project_failed(project):
+            print(json.dumps({"item": project}, ensure_ascii=False))
+            return
+        if str(project.get("status", "")) == "storyboard_ready" and project.get("scenes"):
+            break
+        time.sleep(max(1.0, args.poll_interval))
+    else:
+        raise RuntimeError(f"Timed out waiting for long-video storyboard: {project_id}")
+
+    _, generate_payload = request_json("POST", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}/generate-all", token=token)
+    project = generate_payload.get("item", project)
+    deadline = time.time() + args.generation_timeout
+    while time.time() < deadline:
+        _, detail = request_json("GET", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}", token=token)
+        project = detail.get("item", {})
+        if long_video_project_failed(project):
+            print(json.dumps({"item": project}, ensure_ascii=False))
+            return
+        scenes = project.get("scenes", [])
+        if scenes and all(str(scene.get("status", "")) == "succeeded" for scene in scenes):
+            break
+        time.sleep(max(1.0, args.poll_interval))
+    else:
+        raise RuntimeError(f"Timed out waiting for long-video scene generation: {project_id}")
+
+    _, exported = request_json("POST", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}/export", token=token, timeout=args.export_timeout)
+    project = exported.get("item", project)
+    result = {"item": project, "export": exported.get("export", {})}
+    final_url = str(project.get("finalVideoUrl") or exported.get("export", {}).get("url") or "")
+    if final_url and output_dir:
+        result["downloadedPath"] = download_url(final_url, output_dir, project_id)
+    print(json.dumps(result, ensure_ascii=False))
+
+
 def voice_list(_args):
     api_base, token = get_cli_credentials()
     _, payload = request_json("GET", f"{api_base}/api/h5/digital-human/bootstrap", token=token)
@@ -651,6 +740,8 @@ def main():
         image_generate(args)
     elif args.command == "video" and args.video_command == "generate":
         video_generate(args)
+    elif args.command == "long-video" and args.long_video_command == "generate":
+        long_video_generate(args)
     elif args.command == "voice" and args.voice_command == "list":
         voice_list(args)
     elif args.command == "voice" and args.voice_command == "clone":
