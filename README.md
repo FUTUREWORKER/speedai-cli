@@ -70,6 +70,9 @@ skills/speedai-voice-clone
 skills/speedai-voice-list
 skills/speedai-audio-synthesis
 skills/speedai-digital-human-video
+skills/speedai-video-wanx-2-7
+skills/speedai-video-seedance-2-0
+skills/speedai-video-happyhorse
 ```
 
 如果你的 Agent 支持 `skills` CLI，可以使用类似 libtv 的安装方式：
@@ -80,6 +83,9 @@ npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-voice-clone
 npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-voice-list
 npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-audio-synthesis
 npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-digital-human-video
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-video-wanx-2-7
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-video-seedance-2-0
+npx -y skills add FUTUREWORKER/speedai-cli --skill speedai-video-happyhorse
 ```
 
 不同 Agent 的 skill 目录约定可能不同。如果不支持 `skills` CLI，把上面的目录复制到对应 Agent 的本地 skills/instruction 目录即可。
@@ -169,6 +175,53 @@ speedai image generate `
 ```
 
 生成成功后，记录会出现在用户 H5 创作历史中。
+
+## 视频创作
+
+视频创作同样通过系统接口提交任务，积分扣除、任务队列、OSS 存储和 H5 创作历史都由 Speed AI 后端处理。
+
+万相 2.7：
+```bash
+speedai video generate \
+  --series wanx \
+  --mode t2v \
+  --prompt "一段高级产品宣传短片，黑色无线音箱放在混凝土桌面上，镜头缓慢推进，电影感灯光" \
+  --aspect-ratio 9:16 \
+  --duration-seconds 5 \
+  --output-dir ./generated-videos
+```
+
+Seedance 2.0：
+```bash
+speedai video generate \
+  --series seedance \
+  --mode i2v \
+  --prompt "让人物轻微转头微笑，背景产生浅景深运动，保持脸部一致" \
+  --first-frame /path/to/image.png \
+  --aspect-ratio adaptive \
+  --duration-seconds 5 \
+  --output-dir ./generated-videos
+```
+
+快乐马：
+```bash
+speedai video generate \
+  --series happyhorse \
+  --mode r2v \
+  --prompt "参考图中的角色在简洁舞台上做展示动作，镜头固定，动作自然" \
+  --reference-image /path/to/reference.png \
+  --aspect-ratio 9:16 \
+  --duration-seconds 5 \
+  --output-dir ./generated-videos
+```
+
+常用参数：
+- `--series`：模型系列，支持 `wanx`、`seedance`、`happyhorse`
+- `--mode`：创作模式，常用 `t2v`、`i2v`、`r2v`
+- `--first-frame`：图生视频首帧图片
+- `--reference-image`：参考图，可重复传入
+- `--reference-video`：参考视频，可重复传入；快乐马不使用视频参考
+- `--output-dir`：可选，本地下载目录
 
 ## 声音克隆
 
@@ -339,18 +392,21 @@ speedai-voice-clone
 speedai-voice-list
 speedai-audio-synthesis
 speedai-digital-human-video
+speedai-video-wanx-2-7
+speedai-video-seedance-2-0
+speedai-video-happyhorse
 ```
 
-这个 skill 的职责是告诉 Agent：需要生图时调用 `speedai` CLI，而不是直接调用上游 `gpt-image-2` 供应商接口。
+这些 skill 的职责是告诉 Agent：需要媒体创作时调用 `speedai` CLI，而不是直接调用上游模型供应商接口。
 
 Agent 调用链路：
 
 ```text
 用户自然语言
-  -> Agent 触发 gpt-image-2-image-generation skill
-  -> Agent 执行 speedai image generate ...
+  -> Agent 触发对应 Speed AI skill
+  -> Agent 执行 speedai image/video/audio/digital-human ...
   -> CLI 调用 Speed AI API
-  -> 后端完成用户鉴权、扣积分、生图、OSS 存储、创作历史写入
+  -> 后端完成用户鉴权、扣积分、任务队列、OSS 存储、创作历史写入
 ```
 
 Agent 常用命令：

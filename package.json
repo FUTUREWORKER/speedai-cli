@@ -1,7 +1,7 @@
 {
   "name": "speedai-cli",
-  "version": "0.2.0",
-  "description": "Speed AI CLI for user-authorized system image generation.",
+  "version": "0.3.0",
+  "description": "Speed AI CLI for user-authorized system media generation.",
   "bin": {
     "speedai": "bin/speedai.js"
   },
@@ -22,7 +22,8 @@
     "speedai",
     "cli",
     "agent",
-    "image-generation"
+    "image-generation",
+    "video-generation"
   ],
   "license": "UNLICENSED",
   "private": false,

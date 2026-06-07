@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedai-cli"
-version = "0.2.0"
-description = "Speed AI CLI for user-authorized system image generation."
+version = "0.3.0"
+description = "Speed AI CLI for user-authorized system media generation."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Proprietary" }
 authors = [
   { name = "Future Worker" }
 ]
-keywords = ["speed-ai", "speedai", "cli", "agent", "image-generation"]
+keywords = ["speed-ai", "speedai", "cli", "agent", "image-generation", "video-generation"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",

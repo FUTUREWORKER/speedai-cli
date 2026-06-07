@@ -21,7 +21,7 @@ CONFIG_PATH = CONFIG_DIR / "config.json"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Speed AI CLI for user-authorized system image generation.")
+    parser = argparse.ArgumentParser(description="Speed AI CLI for user-authorized system media generation.")
     parser.add_argument("--api-base", default="", help="API base URL. Overrides SPEEDAI_API_BASE and config.")
     parser.add_argument("--h5-base", default="", help="H5 web base URL. Overrides SPEEDAI_H5_BASE and config.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -61,6 +61,31 @@ def parse_args():
     generate.add_argument("--poll-interval", type=float, default=3.0)
     generate.add_argument("--timeout", type=int, default=600)
     generate.add_argument("--output-dir", default="")
+
+    video = subparsers.add_parser("video")
+    video_sub = video.add_subparsers(dest="video_command", required=True)
+    video_generate_parser = video_sub.add_parser("generate")
+    video_generate_parser.add_argument("--series", required=True, choices=["wanx", "seedance", "happyhorse"])
+    video_generate_parser.add_argument("--prompt", required=True)
+    video_generate_parser.add_argument("--mode", default="t2v", choices=["t2v", "i2v", "first_last_frame", "r2v", "video_extend", "video_edit"])
+    video_generate_parser.add_argument("--aspect-ratio", default="9:16")
+    video_generate_parser.add_argument("--duration-seconds", type=int, default=5)
+    video_generate_parser.add_argument("--resolution", default="720P")
+    video_generate_parser.add_argument("--variant-key", default="")
+    video_generate_parser.add_argument("--model-config-id", default="")
+    video_generate_parser.add_argument("--first-frame", default="")
+    video_generate_parser.add_argument("--last-frame", default="")
+    video_generate_parser.add_argument("--extend-video", default="")
+    video_generate_parser.add_argument("--edit-video", default="")
+    video_generate_parser.add_argument("--reference-image", action="append", default=[])
+    video_generate_parser.add_argument("--reference-video", action="append", default=[])
+    video_generate_parser.add_argument("--negative-prompt", default="")
+    video_generate_parser.add_argument("--camera-fixed", action=argparse.BooleanOptionalAction, default=False)
+    video_generate_parser.add_argument("--trim-long-media", action=argparse.BooleanOptionalAction, default=False)
+    video_generate_parser.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
+    video_generate_parser.add_argument("--poll-interval", type=float, default=5.0)
+    video_generate_parser.add_argument("--timeout", type=int, default=1800)
+    video_generate_parser.add_argument("--output-dir", default="")
 
     voice = subparsers.add_parser("voice")
     voice_sub = voice.add_subparsers(dest="voice_command", required=True)
@@ -335,6 +360,22 @@ def download_record(api_base, token, record_id, output_dir):
         return str(target)
 
 
+def download_video_record(api_base, token, task_id, output_dir):
+    output_path = Path(output_dir).expanduser().resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(
+        f"{api_base}/api/h5/video-generations/{urllib.parse.quote(task_id)}/download",
+        headers={"Authorization": f"Bearer {token}"},
+        method="GET",
+    )
+    with urllib.request.urlopen(request, timeout=600) as response:
+        content_type = response.headers.get("content-type", "video/mp4").split(";")[0]
+        extension = mimetypes.guess_extension(content_type) or ".mp4"
+        target = output_path / f"{task_id}{extension}"
+        target.write_bytes(response.read())
+        return str(target)
+
+
 def download_url(url, output_dir, filename):
     output_path = Path(output_dir).expanduser().resolve()
     output_path.mkdir(parents=True, exist_ok=True)
@@ -388,6 +429,101 @@ def image_generate(args):
             return
         time.sleep(max(1.0, args.poll_interval))
     raise RuntimeError(f"Timed out waiting for image generation record: {record_id}")
+
+
+def select_video_model(api_base, token, series, model_config_id):
+    _, payload = request_json("GET", f"{api_base}/api/h5/video-generation/bootstrap", token=token)
+    models = payload.get("models", [])
+    if model_config_id:
+        for model in models:
+            if str(model.get("id", "")) == model_config_id:
+                return model
+        raise RuntimeError(f"Video model config not found: {model_config_id}")
+    for model in models:
+        capability = model.get("capability", {})
+        if capability.get("series") == series:
+            return model
+    raise RuntimeError(f"No enabled video model found for series: {series}")
+
+
+def build_video_files(args):
+    files = []
+    if args.first_frame:
+        files.append(("firstFrameFile", args.first_frame))
+    if args.last_frame:
+        files.append(("lastFrameFile", args.last_frame))
+    if args.extend_video:
+        files.append(("extendVideoFile", args.extend_video))
+    if args.edit_video:
+        files.append(("editVideoFile", args.edit_video))
+
+    if args.mode == "r2v" and args.series in ("wanx", "seedance"):
+        materials = []
+        for path in args.reference_image:
+            materials.append({"source": "local", "mediaFileIndex": len(materials), "mediaKind": "reference_image"})
+            files.append(("wanxR2vMediaFiles", path))
+        for path in args.reference_video:
+            materials.append({"source": "local", "mediaFileIndex": len(materials), "mediaKind": "reference_video"})
+            files.append(("wanxR2vMediaFiles", path))
+        return files, materials
+
+    files.extend(("referenceImageFiles", path) for path in args.reference_image)
+    files.extend(("referenceVideoFiles", path) for path in args.reference_video)
+    return files, []
+
+
+def video_generate(args):
+    api_base, token = get_cli_credentials()
+    config = load_config()
+    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    model = select_video_model(api_base, token, args.series, args.model_config_id)
+    default_variant = model.get("defaultVariant") or {}
+    variant_key = args.variant_key or str(default_variant.get("variantKey", "") or "")
+    model_config_id = args.model_config_id or str(model.get("id", "") or "")
+
+    fields = [
+        ("clientSubmissionId", str(uuid.uuid4())),
+        ("modelConfigId", model_config_id),
+        ("mode", args.mode),
+        ("prompt", args.prompt),
+        ("resolution", args.resolution),
+        ("durationSeconds", args.duration_seconds),
+        ("aspectRatio", args.aspect_ratio),
+        ("trimLongMedia", "true" if args.trim_long_media else "false"),
+    ]
+    if variant_key:
+        fields.append(("variantKey", variant_key))
+    if args.negative_prompt:
+        fields.append(("negativePrompt", args.negative_prompt))
+    if args.camera_fixed:
+        fields.append(("cameraFixed", "true"))
+
+    files, materials = build_video_files(args)
+    if materials:
+        fields.append(("wanxR2vMaterials", json.dumps(materials, ensure_ascii=False)))
+
+    _, payload = request_multipart(f"{api_base}/api/h5/video-generations", fields, files, token, timeout=300)
+    task = payload.get("task", {})
+    task_id = task.get("taskId", "")
+    if not args.wait or not task_id:
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        _, detail = request_json("GET", f"{api_base}/api/h5/video-generations/{urllib.parse.quote(task_id)}", token=token)
+        task = detail.get("task", {})
+        record = detail.get("record", {})
+        status = str(task.get("taskStatus") or record.get("status") or "")
+        if status in ("成功", "失败", "succeeded", "failed"):
+            result = {"task": task, "record": record}
+            video_url = task.get("videoUrl") or record.get("resultVideoUrl") or record.get("videoUrl")
+            if status in ("成功", "succeeded") and output_dir and video_url:
+                result["downloadedPath"] = download_video_record(api_base, token, task_id, output_dir)
+            print(json.dumps(result, ensure_ascii=False))
+            return
+        time.sleep(max(1.0, args.poll_interval))
+    raise RuntimeError(f"Timed out waiting for video generation task: {task_id}")
 
 
 def voice_list(_args):
@@ -513,6 +649,8 @@ def main():
         config_unset(args)
     elif args.command == "image" and args.image_command == "generate":
         image_generate(args)
+    elif args.command == "video" and args.video_command == "generate":
+        video_generate(args)
     elif args.command == "voice" and args.voice_command == "list":
         voice_list(args)
     elif args.command == "voice" and args.voice_command == "clone":
