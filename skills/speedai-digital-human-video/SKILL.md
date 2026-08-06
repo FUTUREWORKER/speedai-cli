@@ -1,73 +1,41 @@
 ---
 name: speedai-digital-human-video
-description: Generate a digital-human video through the Speed AI system from a portrait image, synthesized audio URL, and cloned voice record id.
+description: Generate a Wooboo AI digital-human video from a trained avatar using either text plus a cloned voice or a local drive-audio file.
 ---
 
-# Speed AI Digital Human Video
+# Wooboo AI Digital Human Video
 
-Use the Speed AI CLI as the system entrypoint. Do not call the upstream digital-human provider directly.
+Use `speedai` so authorization, points billing, OSS storage, task queues, and creation history remain inside the platform. This is an Agent-agnostic skill.
 
-Digital-human video generation requires an existing audio URL. If the user only provides text, first use the audio synthesis skill to create audio, then pass the resulting `audioUrl` and `audioDuration` to this skill.
+## Prerequisites
 
-## Required Flow
+- A ready avatar record from `speedai avatar list` or `speedai avatar create`.
+- Text mode: a ready voice record from `speedai voice list`.
+- Audio mode: a local audio file.
 
-1. Ensure `speedai` is installed.
-2. If the user is not logged in, run `speedai login web --open`.
-3. Ensure a voice record id exists. If needed, run `speedai voice list` or clone a voice first.
-4. Ensure speech audio exists. If needed, run `speedai audio synthesize` first.
-5. Generate the digital-human video with `speedai digital-human generate`.
-6. Report the task id, status, video URL, cover URL, and downloaded path when available.
-
-## Commands
+## Text drive
 
 ```bash
 speedai digital-human generate \
-  --image /path/to/portrait.png \
-  --text "大家好，欢迎来到极速 AI。" \
+  --drive-mode text \
+  --avatar-record-id <avatar-record-id> \
   --voice-record-id <voice-record-id> \
-  --audio-url <audio-url> \
-  --audio-duration 12.3 \
-  --language zh \
-  --model XPro1.0 \
+  --text "大家好，欢迎来到挖宝AI。" \
+  --subtitle \
   --output-dir ./generated-videos
 ```
 
-Windows PowerShell:
+## Audio drive
 
-```powershell
-speedai digital-human generate `
-  --image C:\path\to\portrait.png `
-  --text "大家好，欢迎来到极速 AI。" `
-  --voice-record-id <voice-record-id> `
-  --audio-url <audio-url> `
-  --audio-duration 12.3 `
-  --language zh `
-  --model XPro1.0 `
-  --output-dir .\generated-videos
+```bash
+speedai digital-human generate \
+  --drive-mode audio \
+  --avatar-record-id <avatar-record-id> \
+  --audio /path/to/drive-audio.mp3 \
+  --title "声音驱动视频" \
+  --output-dir ./generated-videos
 ```
 
-## Parameters
+The CLI waits through `queued`, `running`, and `payment_pending`, then returns `succeeded` or `failed`. Report the task ID, billing state, points cost, video URL, and downloaded path.
 
-- `--image`: Required portrait image path.
-- `--text`: Required speech text matching the audio.
-- `--voice-record-id`: Required Speed AI voice record id.
-- `--audio-url`: Required audio URL, usually returned by `speedai audio synthesize`.
-- `--audio-duration`: Required audio duration in seconds.
-- `--language`: Optional language hint. Use `zh` unless the user specifies another language.
-- `--model`: Optional digital-human model. Typical values: `XPro1.0` for fast mode, `XPro2.0` for standard mode.
-- `--prompt`: Optional audio generation prompt snapshot.
-- `--video-prompt`: Optional video behavior prompt.
-- `--output-dir`: Optional local video download directory.
-
-## Response To User
-
-After generation, report:
-
-- Digital-human task id
-- Status
-- Video URL
-- Cover URL if present
-- Downloaded local path if present
-
-If generation fails, surface the backend error. Do not silently fall back to provider direct calls.
-
+Do not use the retired `speedai audio synthesize` workflow, old `--image`, or external `audioUrl` parameters.

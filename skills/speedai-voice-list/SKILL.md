@@ -1,36 +1,20 @@
 ---
 name: speedai-voice-list
-description: Query the current user's Speed AI cloned voice list and digital-human voice configuration through the speedai CLI.
+description: Query and select the current user's Wooboo AI cloned voices for digital-human text-driven video generation.
 ---
 
-# Speed AI Voice List
+# Wooboo AI Voice List
 
-Use this skill when the Agent needs to find available cloned voices or select a `voiceRecordId` for audio or digital-human generation.
-
-Do not query the upstream provider directly. The Speed AI backend is the source of truth for user-owned voices.
-
-## Required Flow
-
-1. Ensure `speedai` is installed.
-2. If the user is not logged in, run `speedai login web --open`.
-3. Query voices with `speedai voice list`.
-4. Use the returned `voices[].id` value as `--voice-record-id` in later commands.
-
-## Commands
+Use the platform voice records as the source of truth. Do not query the upstream voice provider.
 
 ```bash
 speedai voice list
 ```
 
-## Response To User
+Use `voices[].id` as `--voice-record-id`. Prefer a voice whose `cloneStatus` is `ready`. Report the display name, record ID, provider voice ID, language, and clone status when they are available.
 
-Summarize the useful fields:
+Delete only when the user explicitly asks:
 
-- `id`: voice record id used by CLI commands
-- `voiceName`: display name
-- `voiceId`: provider voice id
-- `cloneStatus`: clone status
-- `createdAt`: creation time
-
-Prefer the most recent successfully cloned voice when the user does not specify one.
-
+```bash
+speedai voice delete <voice-record-id>
+```

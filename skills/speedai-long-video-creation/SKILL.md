@@ -1,18 +1,18 @@
 ---
 name: speedai-long-video-creation
-description: Generate long videos through the Speed AI system using the logged-in user's authorization, storyboard generation, scene generation, export, points billing, OSS storage, and H5 creation history.
+description: Generate long videos through the Wooboo AI system using authorization, storyboard and scene generation, export, points billing, OSS storage, and creation history.
 ---
 
-# Speed AI 长视频创作
+# Wooboo AI 长视频创作
 
-使用 Speed AI CLI 作为系统功能入口。不要直连模型供应商，不保存供应商 API Key，不绕过积分扣除和创作历史。
+使用 `speedai` CLI 作为挖宝AI系统功能入口。不要直连模型供应商，不保存供应商 API Key，不绕过积分扣除和创作历史。
 
 本 skill 面向 Codex、OpenClaw、Hermes 等通用 Agent。Agent 只需要会执行本机命令即可。
 
 ## 必须遵守
 
 1. 确认本机已安装 `speedai`。
-2. 如果未授权，运行 `speedai login web --open`，让用户在 Speed AI H5 页面完成授权。
+2. 如果未授权，运行 `speedai login web --open`，让用户在挖宝AI H5 页面完成授权。
 3. 长视频创作必须提供一个参考图或参考视频文件。
 4. 使用 `speedai long-video generate` 提交任务。
 5. 把返回的项目 id、状态、分镜数量、最终视频 URL、下载路径反馈给用户。
@@ -77,4 +77,3 @@ CLI 会按系统流程依次执行：
 - 分镜数量
 - 最终视频 URL
 - 本地下载路径（如果设置了 `--output-dir`）
-

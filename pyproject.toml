@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "speedai-cli"
-version = "0.4.0"
-description = "Speed AI CLI for user-authorized system media generation."
+version = "0.5.0"
+description = "Wooboo AI CLI for user-authorized system media generation."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Proprietary" }
 authors = [
   { name = "Future Worker" }
 ]
-keywords = ["speed-ai", "speedai", "cli", "agent", "image-generation", "video-generation", "long-video"]
+keywords = ["speed-ai", "speedai", "wooboo-ai", "cli", "agent", "image-generation", "video-generation", "long-video", "digital-human"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
