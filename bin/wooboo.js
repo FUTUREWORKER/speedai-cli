@@ -3,7 +3,7 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 
-const cliPath = path.resolve(__dirname, "..", "speedai_cli.py");
+const cliPath = path.resolve(__dirname, "..", "wooboo_ai_cli.py");
 const candidates = process.platform === "win32" ? ["python", "py"] : ["python3", "python"];
 
 let lastError = null;
@@ -18,7 +18,7 @@ for (const candidate of candidates) {
   process.exit(result.status === null ? 1 : result.status);
 }
 
-console.error("Python 3 is required to run speedai CLI.");
+console.error("Python 3 is required to run the Wooboo AI CLI (`wooboo` command).");
 if (lastError && lastError.code !== "ENOENT") {
   console.error(lastError.message);
 }

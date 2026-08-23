@@ -1,16 +1,16 @@
 ---
-name: speedai-video-kling-3-0
+name: wooboo-video-kling-3-0
 description: Generate Kling 3.0 videos through the Wooboo AI system with user authorization, dynamic model selection, OSS direct upload, points billing, and creation history.
 ---
 
 # Wooboo AI Kling 3.0 Video
 
-Use `speedai video generate --series kling`. Do not call Kling or another upstream provider directly.
+Use `wooboo video generate --series kling`. Do not call Kling or another upstream provider directly.
 
 Text to video:
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series kling \
   --mode t2v \
   --prompt "电影感品牌短片，镜头缓慢推进，产品主体稳定" \
@@ -20,7 +20,7 @@ speedai video generate \
 Reference generation with mixed local media:
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series kling \
   --mode r2v \
   --prompt "保持人物与产品一致，参考动作视频生成品牌短片" \

@@ -1,32 +1,31 @@
 {
-  "name": "speedai-cli",
-  "version": "0.5.0",
+  "name": "wooboo-ai-cli",
+  "version": "0.6.0",
   "description": "Wooboo AI CLI for user-authorized system media generation.",
   "bin": {
-    "speedai": "bin/speedai.js"
+    "wooboo": "bin/wooboo.js"
   },
   "files": [
-    "bin/speedai.js",
-    "speedai_cli.py",
+    "bin/wooboo.js",
+    "wooboo_ai_cli.py",
     "skills/",
     "README.md",
-    "install-speedai-cli.ps1",
-    "install-speedai-cli.sh"
+    "install-wooboo-ai-cli.ps1",
+    "install-wooboo-ai-cli.sh"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FUTUREWORKER/speedai-cli.git"
+    "url": "git+https://github.com/FUTUREWORKER/wooboo-ai-cli.git"
   },
   "keywords": [
-    "speed-ai",
-    "speedai",
+    "wooboo-ai",
+    "wooboo",
     "cli",
     "agent",
     "image-generation",
     "video-generation",
     "long-video",
-    "digital-human",
-    "wooboo-ai"
+    "digital-human"
   ],
   "license": "UNLICENSED",
   "private": false,

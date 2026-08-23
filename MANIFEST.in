@@ -1,5 +1,7 @@
 include README.md
-include speedai_cli.py
+include wooboo_ai_cli.py
+include install-wooboo-ai-cli.ps1
+include install-wooboo-ai-cli.sh
 recursive-include skills *
 exclude AGENTS.md
 exclude 待解决问题.md

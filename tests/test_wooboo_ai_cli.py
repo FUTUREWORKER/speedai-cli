@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-import speedai_cli as cli
+import wooboo_ai_cli as cli
 
 
 def image_model():
@@ -425,15 +425,45 @@ class DistributionMetadataTests(unittest.TestCase):
         self.assertIsNotNone(pyproject_version)
         self.assertEqual(package["version"], cli.VERSION)
         self.assertEqual(pyproject_version.group(1), cli.VERSION)
-        self.assertEqual(cli.DEFAULT_API_BASE, "https://speed.ycszai.com")
-        self.assertEqual(cli.DEFAULT_H5_BASE, "https://speed.ycszai.com")
+        self.assertEqual(cli.DEFAULT_API_BASE, "https://wooboo.ycszai.com")
+        self.assertEqual(cli.DEFAULT_H5_BASE, "https://wooboo.ycszai.com")
+
+    def test_distribution_is_named_wooboo_ai_cli(self):
+        root = Path(cli.__file__).resolve().parent
+        package = json.loads((root / "package.json").read_text(encoding="utf-8"))
+        pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        self.assertEqual(package["name"], "wooboo-ai-cli")
+        self.assertEqual(
+            package["repository"]["url"],
+            "git+https://github.com/FUTUREWORKER/wooboo-ai-cli.git",
+        )
+        self.assertIn("install-wooboo-ai-cli.ps1", package["files"])
+        self.assertIn("install-wooboo-ai-cli.sh", package["files"])
+        self.assertIn('name = "wooboo-ai-cli"', pyproject)
+        self.assertIn("FUTUREWORKER/wooboo-ai-cli", readme)
+        self.assertTrue((root / "install-wooboo-ai-cli.ps1").is_file())
+        self.assertTrue((root / "install-wooboo-ai-cli.sh").is_file())
+
+    def test_project_has_no_retired_brand_references(self):
+        root = Path(cli.__file__).resolve().parent
+        retired_brand = re.compile("spe" + r"ed[ -]?ai", re.IGNORECASE)
+        text_suffixes = {".in", ".js", ".json", ".md", ".ps1", ".py", ".sh", ".toml"}
+        for path in root.rglob("*"):
+            relative = path.relative_to(root)
+            if any(part in {".git", "__pycache__"} for part in relative.parts):
+                continue
+            self.assertIsNone(retired_brand.search(str(relative)), f"retired brand in path: {relative}")
+            if path.is_file() and path.suffix.lower() in text_suffixes:
+                content = path.read_text(encoding="utf-8")
+                self.assertIsNone(retired_brand.search(content), f"retired brand in file: {relative}")
 
     def test_skill_frontmatter_matches_directory_names(self):
         root = Path(cli.__file__).resolve().parent
         skills_root = root / "skills"
         skill_directories = sorted(path for path in skills_root.iterdir() if path.is_dir())
         self.assertTrue(skill_directories)
-        self.assertFalse((skills_root / "speedai-audio-synthesis").exists())
+        self.assertFalse((skills_root / "wooboo-audio-synthesis").exists())
         for directory in skill_directories:
             skill_path = directory / "SKILL.md"
             self.assertTrue(skill_path.is_file(), f"missing {skill_path}")
@@ -447,11 +477,11 @@ class DistributionMetadataTests(unittest.TestCase):
         root = Path(cli.__file__).resolve().parent
         readme = (root / "README.md").read_text(encoding="utf-8")
         for command in (
-            "speedai image models",
-            "speedai video models",
+            "wooboo image models",
+            "wooboo video models",
             "--series kling",
-            "speedai avatar create",
-            "speedai digital-human generate",
+            "wooboo avatar create",
+            "wooboo digital-human generate",
         ):
             self.assertIn(command, readme)
 

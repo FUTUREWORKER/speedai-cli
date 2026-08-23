@@ -14,19 +14,19 @@ import urllib.request
 from pathlib import Path
 
 
-VERSION = "0.5.0"
-DEFAULT_API_BASE = "https://speed.ycszai.com"
-DEFAULT_H5_BASE = "https://speed.ycszai.com"
-CONFIG_DIR = Path.home() / ".speed-ai"
+VERSION = "0.6.0"
+DEFAULT_API_BASE = "https://wooboo.ycszai.com"
+DEFAULT_H5_BASE = "https://wooboo.ycszai.com"
+CONFIG_DIR = Path.home() / ".wooboo-ai"
 CREDENTIALS_PATH = CONFIG_DIR / "credentials.json"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Wooboo AI system media generation CLI.")
-    parser.add_argument("--version", action="version", version=f"speedai {VERSION}")
-    parser.add_argument("--api-base", default="", help="API base URL. Overrides SPEEDAI_API_BASE and config.")
-    parser.add_argument("--h5-base", default="", help="H5 web base URL. Overrides SPEEDAI_H5_BASE and config.")
+    parser.add_argument("--version", action="version", version=f"wooboo {VERSION}")
+    parser.add_argument("--api-base", default="", help="API base URL. Overrides WOOBOO_API_BASE and config.")
+    parser.add_argument("--h5-base", default="", help="H5 web base URL. Overrides WOOBOO_H5_BASE and config.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     login = subparsers.add_parser("login")
@@ -176,7 +176,7 @@ def normalize_base(url):
 def resolve_api_base(args):
     return normalize_base(
         args.api_base
-        or os.environ.get("SPEEDAI_API_BASE", "")
+        or os.environ.get("WOOBOO_API_BASE", "")
         or str(load_config().get("api_base", "") or "")
         or DEFAULT_API_BASE
     )
@@ -185,7 +185,7 @@ def resolve_api_base(args):
 def resolve_h5_base(args):
     return normalize_base(
         args.h5_base
-        or os.environ.get("SPEEDAI_H5_BASE", "")
+        or os.environ.get("WOOBOO_H5_BASE", "")
         or str(load_config().get("h5_base", "") or "")
         or DEFAULT_H5_BASE
     )
@@ -300,7 +300,7 @@ def direct_upload_file(api_base, token, path, purpose, field_name, fallback_cont
 
 
 def encode_multipart(fields, files):
-    boundary = f"----speedai-{uuid.uuid4().hex}"
+    boundary = f"----wooboo-{uuid.uuid4().hex}"
     chunks = []
     for name, value in fields:
         chunks.append(f"--{boundary}\r\n".encode("utf-8"))
@@ -366,7 +366,7 @@ def save_credentials(api_base, h5_base, token, user):
 
 def load_credentials():
     if not CREDENTIALS_PATH.is_file():
-        raise RuntimeError("Not logged in. Run: speedai login web")
+        raise RuntimeError("Not logged in. Run: wooboo login web")
     return json.loads(CREDENTIALS_PATH.read_text(encoding="utf-8"))
 
 
@@ -581,7 +581,7 @@ def image_generate(args):
     config = load_config()
     api_base = normalize_base(credentials.get("api_base") or resolve_api_base(args))
     token = credentials["token"]
-    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    output_dir = args.output_dir or os.environ.get("WOOBOO_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
     bootstrap = fetch_image_bootstrap(api_base, token, args.scene)
     model = select_image_model(bootstrap, args.model_config_id, args.model)
     variant = select_image_variant(model, args.variant_key, args.quality)
@@ -776,7 +776,7 @@ def validate_video_inputs(args, capability):
 def video_generate(args):
     api_base, token = get_cli_credentials()
     config = load_config()
-    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    output_dir = args.output_dir or os.environ.get("WOOBOO_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
     bootstrap = fetch_video_bootstrap(api_base, token)
     model = select_video_model(bootstrap, args.series, args.model_config_id, args.model, args.mode)
     capability = model.get("capability") or {}
@@ -856,7 +856,7 @@ def long_video_project_failed(project):
 def long_video_generate(args):
     api_base, token = get_cli_credentials()
     config = load_config()
-    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    output_dir = args.output_dir or os.environ.get("WOOBOO_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
     _, bootstrap = request_json("GET", f"{api_base}/api/h5/long-video/bootstrap", token=token)
     default_variant = (bootstrap.get("model", {}).get("defaultVariant") or {})
     variant_key = args.variant_key or str(default_variant.get("variantKey", "") or "")
@@ -1040,7 +1040,7 @@ def avatar_delete(args):
 def audio_synthesize(args):
     raise RuntimeError(
         "The standalone audio synthesis API has been retired. "
-        "Use `speedai digital-human generate --drive-mode text --avatar-record-id ... "
+        "Use `wooboo digital-human generate --drive-mode text --avatar-record-id ... "
         "--voice-record-id ... --text ...` instead."
     )
 
@@ -1048,7 +1048,7 @@ def audio_synthesize(args):
 def digital_human_generate(args):
     api_base, token = get_cli_credentials()
     config = load_config()
-    output_dir = args.output_dir or os.environ.get("SPEEDAI_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
+    output_dir = args.output_dir or os.environ.get("WOOBOO_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
     if args.drive_mode == "text":
         if not args.text.strip():
             raise RuntimeError("Text drive mode requires --text")

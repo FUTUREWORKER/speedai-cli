@@ -1,22 +1,22 @@
 ---
-name: speedai-voice-clone
+name: wooboo-voice-clone
 description: Clone a reusable voice through the Wooboo AI system with user authorization, points billing, OSS direct upload, and task tracking.
 ---
 
 # Wooboo AI Voice Clone
 
-Use the `speedai` CLI as the system entrypoint. This skill is Agent-agnostic and works with Codex, OpenClaw, Hermes, or any Agent that can run local commands.
+Use the `wooboo` CLI as the system entrypoint. This skill is Agent-agnostic and works with Codex, OpenClaw, Hermes, or any Agent that can run local commands.
 
 ## Required flow
 
-1. Ensure `speedai` is installed.
-2. If authorization is missing, run `speedai login web --open`.
-3. Run `speedai voice clone` with a local speech sample.
+1. Ensure `wooboo` is installed.
+2. If authorization is missing, run `wooboo login web --open`.
+3. Run `wooboo voice clone` with a local speech sample.
 4. Wait for `cloneStatus` to become `ready`, `failed`, or `migration_pending`.
 5. Report `item.id`; digital-human text drive uses it as `--voice-record-id`.
 
 ```bash
-speedai voice clone \
+wooboo voice clone \
   --audio /path/to/sample.wav \
   --name "我的音色" \
   --language zh
@@ -25,7 +25,7 @@ speedai voice clone \
 Windows PowerShell:
 
 ```powershell
-speedai voice clone `
+wooboo voice clone `
   --audio C:\path\to\sample.wav `
   --name "我的音色" `
   --language zh

@@ -1,5 +1,5 @@
 ---
-name: speedai-voice-list
+name: wooboo-voice-list
 description: Query and select the current user's Wooboo AI cloned voices for digital-human text-driven video generation.
 ---
 
@@ -8,7 +8,7 @@ description: Query and select the current user's Wooboo AI cloned voices for dig
 Use the platform voice records as the source of truth. Do not query the upstream voice provider.
 
 ```bash
-speedai voice list
+wooboo voice list
 ```
 
 Use `voices[].id` as `--voice-record-id`. Prefer a voice whose `cloneStatus` is `ready`. Report the display name, record ID, provider voice ID, language, and clone status when they are available.
@@ -16,5 +16,5 @@ Use `voices[].id` as `--voice-record-id`. Prefer a voice whose `cloneStatus` is 
 Delete only when the user explicitly asks:
 
 ```bash
-speedai voice delete <voice-record-id>
+wooboo voice delete <voice-record-id>
 ```

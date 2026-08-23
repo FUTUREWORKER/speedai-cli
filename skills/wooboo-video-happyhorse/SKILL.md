@@ -1,19 +1,19 @@
 ---
-name: speedai-video-happyhorse
+name: wooboo-video-happyhorse
 description: Generate HappyHorse videos through the Wooboo AI system using authorization, points billing, OSS direct upload, task queues, and creation history.
 ---
 
 # Wooboo AI 快乐马视频创作
 
-使用 `speedai` CLI 作为挖宝AI系统功能入口。不要直连模型供应商，不保存供应商 API Key，不绕过积分扣除和创作历史。
+使用 `wooboo` CLI 作为挖宝AI系统功能入口。不要直连模型供应商，不保存供应商 API Key，不绕过积分扣除和创作历史。
 
 本 skill 面向 Codex、OpenClaw、Hermes 等通用 Agent。Agent 只需要会执行本机命令即可。
 
 ## 必须遵守
 
-1. 确认本机已安装 `speedai`。
-2. 如果未授权，运行 `speedai login web --open`，让用户在挖宝AI H5 页面完成授权。
-3. 使用 `speedai video generate --series happyhorse` 提交任务。
+1. 确认本机已安装 `wooboo`。
+2. 如果未授权，运行 `wooboo login web --open`，让用户在挖宝AI H5 页面完成授权。
+3. 使用 `wooboo video generate --series happyhorse` 提交任务。
 4. 把返回的任务 id、状态、视频 URL、下载路径反馈给用户。
 5. 如果失败，直接展示系统返回的错误，不要改用供应商直连接口。
 
@@ -22,7 +22,7 @@ description: Generate HappyHorse videos through the Wooboo AI system using autho
 文生视频：
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series happyhorse \
   --mode t2v \
   --prompt "一只可爱的品牌吉祥物在明亮展厅中向镜头挥手，动作夸张但流畅，镜头稳定" \
@@ -34,7 +34,7 @@ speedai video generate \
 图生视频：
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series happyhorse \
   --mode i2v \
   --prompt "让图片中的角色做一个自然挥手动作，保持脸部和服装一致" \
@@ -47,7 +47,7 @@ speedai video generate \
 参考图生视频：
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series happyhorse \
   --mode r2v \
   --prompt "参考图中的角色在简洁舞台上做展示动作，镜头固定，动作自然" \
@@ -60,7 +60,7 @@ speedai video generate \
 Windows PowerShell：
 
 ```powershell
-speedai video generate `
+wooboo video generate `
   --series happyhorse `
   --mode r2v `
   --prompt "参考图中的角色在简洁舞台上做展示动作，镜头固定，动作自然" `

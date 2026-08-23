@@ -1,19 +1,19 @@
 ---
-name: speedai-video-wanx-2-7
+name: wooboo-video-wanx-2-7
 description: Generate Wanx 2.7 videos through the Wooboo AI system using authorization, points billing, OSS direct upload, task queues, and creation history.
 ---
 
 # Wooboo AI 万相 2.7 视频创作
 
-使用 `speedai` CLI 作为挖宝AI系统功能入口。不要直连模型供应商，不保存供应商 API Key，不绕过积分扣除和创作历史。
+使用 `wooboo` CLI 作为挖宝AI系统功能入口。不要直连模型供应商，不保存供应商 API Key，不绕过积分扣除和创作历史。
 
 本 skill 面向 Codex、OpenClaw、Hermes 等通用 Agent。Agent 只需要会执行本机命令即可。
 
 ## 必须遵守
 
-1. 确认本机已安装 `speedai`。
-2. 如果未授权，运行 `speedai login web --open`，让用户在挖宝AI H5 页面完成授权。
-3. 使用 `speedai video generate --series wanx` 提交任务。
+1. 确认本机已安装 `wooboo`。
+2. 如果未授权，运行 `wooboo login web --open`，让用户在挖宝AI H5 页面完成授权。
+3. 使用 `wooboo video generate --series wanx` 提交任务。
 4. 把返回的任务 id、状态、视频 URL、下载路径反馈给用户。
 5. 如果失败，直接展示系统返回的错误，不要改用供应商直连接口。
 
@@ -22,7 +22,7 @@ description: Generate Wanx 2.7 videos through the Wooboo AI system using authori
 文生视频：
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series wanx \
   --mode t2v \
   --prompt "一段高级产品宣传短片，黑色无线音箱放在混凝土桌面上，镜头缓慢推进，电影感灯光" \
@@ -34,7 +34,7 @@ speedai video generate \
 图生视频：
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series wanx \
   --mode i2v \
   --prompt "让画面中的产品缓慢旋转，背景光线流动，保持主体细节稳定" \
@@ -47,7 +47,7 @@ speedai video generate \
 参考生视频：
 
 ```bash
-speedai video generate \
+wooboo video generate \
   --series wanx \
   --mode r2v \
   --prompt "参考素材中的角色走进未来感展厅，镜头跟拍，动作自然" \
@@ -60,7 +60,7 @@ speedai video generate \
 Windows PowerShell 使用反引号换行：
 
 ```powershell
-speedai video generate `
+wooboo video generate `
   --series wanx `
   --mode t2v `
   --prompt "一段高级产品宣传短片，黑色无线音箱放在混凝土桌面上，镜头缓慢推进，电影感灯光" `
