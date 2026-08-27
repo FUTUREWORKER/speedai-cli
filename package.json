@@ -1,6 +1,6 @@
 {
   "name": "wooboo-ai-cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Wooboo AI CLI for user-authorized system media generation.",
   "bin": {
     "wooboo": "bin/wooboo.js"
@@ -24,7 +24,9 @@
     "agent",
     "image-generation",
     "video-generation",
-    "long-video",
+    "video-package",
+    "wan3",
+    "creative-agent",
     "digital-human"
   ],
   "license": "UNLICENSED",

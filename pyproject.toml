@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wooboo-ai-cli"
-version = "0.6.0"
+version = "0.7.0"
 description = "Wooboo AI CLI for user-authorized system media generation."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -12,7 +12,7 @@ license = { text = "Proprietary" }
 authors = [
   { name = "Future Worker" }
 ]
-keywords = ["wooboo-ai", "wooboo", "cli", "agent", "image-generation", "video-generation", "long-video", "digital-human"]
+keywords = ["wooboo-ai", "wooboo", "cli", "agent", "image-generation", "video-generation", "video-package", "wan3", "digital-human"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",

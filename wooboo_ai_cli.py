@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 DEFAULT_API_BASE = "https://wooboo.ycszai.com"
 DEFAULT_H5_BASE = "https://wooboo.ycszai.com"
 CONFIG_DIR = Path.home() / ".wooboo-ai"
@@ -37,7 +37,22 @@ def parse_args():
     login_web.add_argument("--poll-interval", type=float, default=2.0)
 
     subparsers.add_parser("logout")
-    subparsers.add_parser("account")
+
+    account_parser = subparsers.add_parser("account")
+    account_sub = account_parser.add_subparsers(dest="account_command")
+    account_sub.add_parser("show")
+    account_points = account_sub.add_parser("points")
+    account_points.add_argument("--page", type=int, default=1)
+    account_points.add_argument("--page-size", type=int, default=20)
+    account_password = account_sub.add_parser("change-password")
+    account_password.add_argument("--old-password", required=True)
+    account_password.add_argument("--new-password", required=True)
+    account_invitation = account_sub.add_parser("bind-invitation")
+    account_invitation.add_argument("code")
+    account_avatar = account_sub.add_parser("avatar")
+    account_avatar.add_argument("--image", required=True)
+    account_redeem = account_sub.add_parser("redeem")
+    account_redeem.add_argument("card_code")
 
     config = subparsers.add_parser("config")
     config_sub = config.add_subparsers(dest="config_command", required=True)
@@ -50,10 +65,18 @@ def parse_args():
     config_unset = config_sub.add_parser("unset")
     config_unset.add_argument("key", choices=["api-base", "h5-base", "output-dir"])
 
+    content = subparsers.add_parser("content")
+    content_sub = content.add_subparsers(dest="content_command", required=True)
+    content_sub.add_parser("bootstrap")
+    content_sub.add_parser("hot-creations")
+    content_legal = content_sub.add_parser("legal")
+    content_legal.add_argument("document_type")
+
     image = subparsers.add_parser("image")
     image_sub = image.add_subparsers(dest="image_command", required=True)
     image_models = image_sub.add_parser("models")
     image_models.add_argument("--scene", default="图片生成")
+    image_sub.add_parser("history")
     generate = image_sub.add_parser("generate")
     generate.add_argument("--prompt", required=True)
     generate.add_argument("--scene", default="图片生成")
@@ -67,10 +90,25 @@ def parse_args():
     generate.add_argument("--poll-interval", type=float, default=3.0)
     generate.add_argument("--timeout", type=int, default=600)
     generate.add_argument("--output-dir", default="")
+    image_status = image_sub.add_parser("status")
+    image_status.add_argument("id")
+    image_download = image_sub.add_parser("download")
+    image_download.add_argument("id")
+    image_download.add_argument("--output-dir", default="")
 
     video = subparsers.add_parser("video")
     video_sub = video.add_subparsers(dest="video_command", required=True)
     video_sub.add_parser("models")
+    video_optimize = video_sub.add_parser("optimize-prompt")
+    video_optimize.add_argument("--prompt", required=True)
+    video_optimize.add_argument("--mode", default="t2v", choices=["t2v", "i2v", "first_last_frame", "r2v", "video_extend", "video_edit"])
+    video_optimize.add_argument("--series", default="")
+    video_optimize.add_argument("--model", default="")
+    video_optimize.add_argument("--model-config-id", default="")
+    video_optimize.add_argument("--aspect-ratio", default="")
+    video_optimize.add_argument("--max-duration-seconds", type=int, default=0)
+    video_optimize.add_argument("--has-video-reference", action=argparse.BooleanOptionalAction, default=False)
+    video_optimize.add_argument("--material", action="append", default=[], help="Material as kind:role, for example image:reference or audio:voice.")
     video_generate_parser = video_sub.add_parser("generate")
     video_generate_parser.add_argument("--series", default="", help="Video series such as wanx, seedance, happyhorse, or kling.")
     video_generate_parser.add_argument("--model", default="", help="Model display name or provider model name.")
@@ -87,28 +125,54 @@ def parse_args():
     video_generate_parser.add_argument("--edit-video", default="")
     video_generate_parser.add_argument("--reference-image", action="append", default=[])
     video_generate_parser.add_argument("--reference-video", action="append", default=[])
+    video_generate_parser.add_argument("--reference-audio", action="append", default=[])
+    video_generate_parser.add_argument("--reference-file", default="")
+    video_generate_parser.add_argument("--reference-link", default="")
     video_generate_parser.add_argument("--negative-prompt", default="")
+    video_generate_parser.add_argument("--audio", action=argparse.BooleanOptionalAction, default=None)
+    video_generate_parser.add_argument("--prompt-extend", action=argparse.BooleanOptionalAction, default=None)
+    video_generate_parser.add_argument("--watermark", action=argparse.BooleanOptionalAction, default=None)
     video_generate_parser.add_argument("--camera-fixed", action=argparse.BooleanOptionalAction, default=False)
     video_generate_parser.add_argument("--trim-long-media", action=argparse.BooleanOptionalAction, default=False)
     video_generate_parser.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
     video_generate_parser.add_argument("--poll-interval", type=float, default=5.0)
     video_generate_parser.add_argument("--timeout", type=int, default=1800)
     video_generate_parser.add_argument("--output-dir", default="")
+    video_status = video_sub.add_parser("status")
+    video_status.add_argument("id")
+    video_download = video_sub.add_parser("download")
+    video_download.add_argument("id")
+    video_download.add_argument("--output-dir", default="")
 
-    long_video = subparsers.add_parser("long-video")
-    long_video_sub = long_video.add_subparsers(dest="long_video_command", required=True)
-    long_video_generate_parser = long_video_sub.add_parser("generate")
-    long_video_generate_parser.add_argument("--prompt", required=True)
-    long_video_generate_parser.add_argument("--reference", required=True)
-    long_video_generate_parser.add_argument("--voice", default="")
-    long_video_generate_parser.add_argument("--aspect-ratio", default="9:16", choices=["9:16", "16:9"])
-    long_video_generate_parser.add_argument("--variant-key", default="")
-    long_video_generate_parser.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
-    long_video_generate_parser.add_argument("--poll-interval", type=float, default=8.0)
-    long_video_generate_parser.add_argument("--storyboard-timeout", type=int, default=600)
-    long_video_generate_parser.add_argument("--generation-timeout", type=int, default=3600)
-    long_video_generate_parser.add_argument("--export-timeout", type=int, default=900)
-    long_video_generate_parser.add_argument("--output-dir", default="")
+    video_package = subparsers.add_parser("video-package")
+    video_package_sub = video_package.add_subparsers(dest="video_package_command", required=True)
+    video_package_sub.add_parser("bootstrap")
+    video_package_templates = video_package_sub.add_parser("templates")
+    video_package_templates.add_argument("--offset", type=int, default=0)
+    video_package_templates.add_argument("--limit", type=int, default=30)
+    video_package_music = video_package_sub.add_parser("music")
+    video_package_music.add_argument("--offset", type=int, default=0)
+    video_package_music.add_argument("--limit", type=int, default=30)
+    video_package_sub.add_parser("list")
+    video_package_generate = video_package_sub.add_parser("generate")
+    video_package_generate.add_argument("--video", required=True)
+    video_package_generate.add_argument("--title", required=True)
+    video_package_generate.add_argument("--duration-seconds", type=float, required=True)
+    video_package_generate.add_argument("--style-id", default="")
+    video_package_generate.add_argument("--music-id", default="")
+    video_package_generate.add_argument("--identity-name", default="")
+    video_package_generate.add_argument("--identity-desc", default="")
+    video_package_generate.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
+    video_package_generate.add_argument("--poll-interval", type=float, default=8.0)
+    video_package_generate.add_argument("--timeout", type=int, default=3600)
+    video_package_generate.add_argument("--output-dir", default="")
+    video_package_status = video_package_sub.add_parser("status")
+    video_package_status.add_argument("id")
+    video_package_download = video_package_sub.add_parser("download")
+    video_package_download.add_argument("id")
+    video_package_download.add_argument("--output-dir", default="")
+    video_package_delete = video_package_sub.add_parser("delete")
+    video_package_delete.add_argument("id")
 
     voice = subparsers.add_parser("voice")
     voice_sub = voice.add_subparsers(dest="voice_command", required=True)
@@ -123,6 +187,8 @@ def parse_args():
     voice_clone.add_argument("--timeout", type=int, default=1800)
     voice_delete = voice_sub.add_parser("delete")
     voice_delete.add_argument("id")
+    voice_status = voice_sub.add_parser("status")
+    voice_status.add_argument("id")
 
     avatar = subparsers.add_parser("avatar")
     avatar_sub = avatar.add_subparsers(dest="avatar_command", required=True)
@@ -135,21 +201,12 @@ def parse_args():
     avatar_create.add_argument("--timeout", type=int, default=7200)
     avatar_delete = avatar_sub.add_parser("delete")
     avatar_delete.add_argument("id")
-
-    audio = subparsers.add_parser("audio")
-    audio_sub = audio.add_subparsers(dest="audio_command", required=True)
-    synthesize = audio_sub.add_parser("synthesize")
-    synthesize.add_argument("--text", default="")
-    synthesize.add_argument("--voice-record-id", default="")
-    synthesize.add_argument("--language", default="")
-    synthesize.add_argument("--speech-rate", type=float, default=0)
-    synthesize.add_argument("--pitch-rate", type=float, default=0)
-    synthesize.add_argument("--volume", type=float, default=50)
-    synthesize.add_argument("--prompt", default="")
-    synthesize.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
-    synthesize.add_argument("--poll-interval", type=float, default=3.0)
-    synthesize.add_argument("--timeout", type=int, default=600)
-    synthesize.add_argument("--output-dir", default="")
+    avatar_status = avatar_sub.add_parser("status")
+    avatar_status.add_argument("id")
+    avatar_accept = avatar_sub.add_parser("accept-voice-offer")
+    avatar_accept.add_argument("id")
+    avatar_dismiss = avatar_sub.add_parser("dismiss-voice-offer")
+    avatar_dismiss.add_argument("id")
 
     human = subparsers.add_parser("digital-human")
     human_sub = human.add_subparsers(dest="human_command", required=True)
@@ -165,6 +222,83 @@ def parse_args():
     human_generate.add_argument("--poll-interval", type=float, default=5.0)
     human_generate.add_argument("--timeout", type=int, default=7200)
     human_generate.add_argument("--output-dir", default="")
+    human_status = human_sub.add_parser("status")
+    human_status.add_argument("id")
+    human_download = human_sub.add_parser("download")
+    human_download.add_argument("id")
+    human_download.add_argument("--output-dir", default="")
+
+    history = subparsers.add_parser("history")
+    history_sub = history.add_subparsers(dest="history_command", required=True)
+    history_sub.add_parser("list")
+    history_delete = history_sub.add_parser("delete")
+    history_delete.add_argument("id")
+    history_delete.add_argument("--type", default="")
+    history_download = history_sub.add_parser("download")
+    history_download.add_argument("id")
+    history_download.add_argument("--output-dir", default="")
+
+    favorite = subparsers.add_parser("favorite")
+    favorite_sub = favorite.add_subparsers(dest="favorite_command", required=True)
+    favorite_sub.add_parser("list")
+    favorite_add = favorite_sub.add_parser("add")
+    favorite_add.add_argument("--kind", required=True, choices=["image", "video"])
+    favorite_add.add_argument("--record-id", required=True)
+    favorite_remove = favorite_sub.add_parser("remove")
+    favorite_remove.add_argument("id")
+
+    viral = subparsers.add_parser("viral-video")
+    viral_sub = viral.add_subparsers(dest="viral_command", required=True)
+    viral_analyze = viral_sub.add_parser("analyze")
+    viral_analyze.add_argument("--url", required=True)
+    viral_analyze.add_argument("--wait", action=argparse.BooleanOptionalAction, default=True)
+    viral_analyze.add_argument("--poll-interval", type=float, default=5.0)
+    viral_analyze.add_argument("--timeout", type=int, default=900)
+    viral_sub.add_parser("latest")
+    viral_status = viral_sub.add_parser("status")
+    viral_status.add_argument("id")
+
+    ip_clone = subparsers.add_parser("ip-clone")
+    ip_clone_sub = ip_clone.add_subparsers(dest="ip_clone_command", required=True)
+    ip_clone_sub.add_parser("list")
+    ip_clone_create = ip_clone_sub.add_parser("create")
+    ip_clone_create.add_argument("--name", required=True)
+    ip_clone_create.add_argument("--company", required=True)
+    ip_clone_create.add_argument("--business", required=True)
+    ip_clone_update = ip_clone_sub.add_parser("update")
+    ip_clone_update.add_argument("id")
+    ip_clone_update.add_argument("--name", default="")
+    ip_clone_update.add_argument("--company", default="")
+    ip_clone_update.add_argument("--business", default="")
+    ip_clone_delete = ip_clone_sub.add_parser("delete")
+    ip_clone_delete.add_argument("id")
+    ip_clone_upload = ip_clone_sub.add_parser("upload")
+    ip_clone_upload.add_argument("id")
+    ip_clone_upload.add_argument("--type", required=True, choices=["photo", "video", "voice"])
+    ip_clone_upload.add_argument("--file", required=True)
+    ip_clone_parse = ip_clone_sub.add_parser("parse-file")
+    ip_clone_parse.add_argument("--file", required=True)
+
+    agent = subparsers.add_parser("agent")
+    agent_sub = agent.add_subparsers(dest="agent_command", required=True)
+    agent_bootstrap = agent_sub.add_parser("bootstrap")
+    agent_bootstrap.add_argument("code")
+    agent_conversations = agent_sub.add_parser("conversations")
+    agent_conversations.add_argument("code")
+    agent_messages = agent_sub.add_parser("messages")
+    agent_messages.add_argument("conversation_id")
+    agent_clear = agent_sub.add_parser("clear")
+    agent_clear.add_argument("code")
+    agent_chat = agent_sub.add_parser("chat")
+    agent_chat.add_argument("code")
+    agent_chat.add_argument("--text", default="")
+    agent_chat.add_argument("--conversation-id", default="")
+    agent_chat.add_argument("--ip-clone-id", default="")
+    agent_chat.add_argument("--file", action="append", default=[])
+    agent_chat.add_argument("--timeout", type=int, default=900)
+    agent_cancel = agent_sub.add_parser("cancel")
+    agent_cancel.add_argument("code")
+    agent_cancel.add_argument("job_id")
 
     return parser.parse_args()
 
@@ -191,13 +325,14 @@ def resolve_h5_base(args):
     )
 
 
-def request_json(method, url, payload=None, token="", timeout=30):
+def request_json(method, url, payload=None, token="", timeout=30, extra_headers=None):
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     headers = {}
     if payload is not None:
         headers["Content-Type"] = "application/json"
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    headers.update({str(key): str(value) for key, value in (extra_headers or {}).items()})
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -211,6 +346,40 @@ def request_json(method, url, payload=None, token="", timeout=30):
         except json.JSONDecodeError:
             message = body
         raise RuntimeError(f"HTTP {error.code}: {message}") from error
+
+
+def request_ndjson(method, url, payload, token, timeout=900):
+    data = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "X-Agent-Stream": "ndjson",
+        },
+        method=method,
+    )
+    events = []
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            for raw_line in response:
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if not line:
+                    continue
+                event = json.loads(line)
+                events.append(event)
+                if event.get("type") == "error":
+                    raise RuntimeError(str(event.get("message") or "Agent request failed"))
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")
+        try:
+            error_payload = json.loads(body)
+            message = error_payload.get("message") or error_payload.get("error", {}).get("message") or body
+        except json.JSONDecodeError:
+            message = body
+        raise RuntimeError(f"HTTP {error.code}: {message}") from error
+    return events
 
 
 def resolve_local_file(path, label="File"):
@@ -412,6 +581,14 @@ def login_web(args):
 
 def logout(_args):
     if CREDENTIALS_PATH.exists():
+        credentials = load_credentials()
+        api_base = normalize_base(credentials.get("api_base") or DEFAULT_API_BASE)
+        token = str(credentials.get("token") or "")
+        if token:
+            try:
+                request_json("POST", f"{api_base}/api/auth/user/logout", {}, token=token)
+            except Exception:
+                pass
         CREDENTIALS_PATH.unlink()
     print(json.dumps({"ok": True}, ensure_ascii=False))
 
@@ -423,6 +600,62 @@ def account(_args):
     _, payload = request_json("GET", f"{api_base}/api/auth/user/me", token=token)
     credentials["user"] = payload["user"]
     save_credentials(api_base, credentials.get("h5_base") or DEFAULT_H5_BASE, token, payload["user"])
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def account_points(args):
+    api_base, token = get_cli_credentials()
+    query = urllib.parse.urlencode({"page": max(1, args.page), "pageSize": max(1, min(50, args.page_size))})
+    _, payload = request_json("GET", f"{api_base}/api/h5/point-ledger?{query}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def account_change_password(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/auth/user/change-password",
+        {"oldPassword": args.old_password, "newPassword": args.new_password},
+        token=token,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def account_bind_invitation(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/auth/user/invitation",
+        {"invitationCode": args.code},
+        token=token,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def account_avatar(args):
+    api_base, token = get_cli_credentials()
+    uploaded = direct_upload_file(api_base, token, args.image, "user_avatar", "file", "image/png")
+    try:
+        _, payload = request_json(
+            "POST",
+            f"{api_base}/api/auth/user/avatar",
+            {"uploadId": uploaded["uploadId"]},
+            token=token,
+        )
+    except Exception:
+        delete_media_upload(api_base, token, uploaded["uploadId"])
+        raise
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def account_redeem(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/h5/recharge-cards/redeem",
+        {"cardCode": args.card_code},
+        token=token,
+    )
     print(json.dumps(payload, ensure_ascii=False))
 
 
@@ -465,6 +698,21 @@ def config_unset(args):
     print(json.dumps({"ok": True, "removed": removed, "config": str(CONFIG_PATH)}, ensure_ascii=False))
 
 
+def content_query(args):
+    if CREDENTIALS_PATH.is_file():
+        api_base, token = get_cli_credentials()
+    else:
+        api_base, token = resolve_api_base(args), ""
+    if args.content_command == "bootstrap":
+        path = "/api/h5/bootstrap"
+    elif args.content_command == "hot-creations":
+        path = "/api/h5/hot-creations"
+    else:
+        path = f"/api/h5/legal-documents/{urllib.parse.quote(args.document_type)}"
+    _, payload = request_json("GET", f"{api_base}{path}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
 def download_record(api_base, token, record_id, output_dir):
     output_path = Path(output_dir).expanduser().resolve()
     output_path.mkdir(parents=True, exist_ok=True)
@@ -495,6 +743,27 @@ def download_video_record(api_base, token, task_id, output_dir):
         target = output_path / f"{task_id}{extension}"
         target.write_bytes(response.read())
         return str(target)
+
+
+def download_authenticated_url(url, token, output_dir, filename, fallback_extension=""):
+    output_path = Path(output_dir).expanduser().resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Bearer {token}"} if token else {},
+        method="GET",
+    )
+    with urllib.request.urlopen(request, timeout=600) as response:
+        content_type = response.headers.get("content-type", "").split(";")[0]
+        extension = mimetypes.guess_extension(content_type) or fallback_extension or Path(urllib.parse.urlparse(url).path).suffix or ""
+        target = output_path / f"{filename}{extension}"
+        target.write_bytes(response.read())
+        return str(target)
+
+
+def resolve_output_dir(explicit=""):
+    config = load_config()
+    return explicit or os.environ.get("WOOBOO_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "") or os.getcwd()
 
 
 def download_url(url, output_dir, filename):
@@ -534,6 +803,24 @@ def fetch_image_bootstrap(api_base, token, scene):
 def image_models(args):
     api_base, token = get_cli_credentials()
     print(json.dumps(fetch_image_bootstrap(api_base, token, args.scene), ensure_ascii=False))
+
+
+def image_history(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/image-generations/history", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def image_status(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/image-generations/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def image_download(args):
+    api_base, token = get_cli_credentials()
+    path = download_record(api_base, token, args.id, resolve_output_dir(args.output_dir))
+    print(json.dumps({"id": args.id, "downloadedPath": path}, ensure_ascii=False))
 
 
 def select_image_model(bootstrap, model_config_id="", model_selector=""):
@@ -638,6 +925,33 @@ def video_models(_args):
     print(json.dumps(fetch_video_bootstrap(api_base, token), ensure_ascii=False))
 
 
+def video_optimize_prompt(args):
+    api_base, token = get_cli_credentials()
+    bootstrap = fetch_video_bootstrap(api_base, token)
+    model = select_video_model(bootstrap, args.series, args.model_config_id, args.model, args.mode)
+    materials = []
+    valid_kinds = {"image", "video", "audio", "file", "link"}
+    valid_roles = {"reference", "first_frame", "last_frame", "source", "voice"}
+    for value in args.material:
+        kind, separator, role = value.partition(":")
+        if not separator or kind not in valid_kinds or role not in valid_roles:
+            raise RuntimeError(f"Invalid material {value!r}; expected kind:role")
+        materials.append({"kind": kind, "role": role})
+    body = {
+        "prompt": args.prompt,
+        "modelConfigId": model.get("id") or "",
+        "mode": args.mode,
+        "hasVideoReference": bool(args.has_video_reference),
+        "materials": materials,
+    }
+    if args.aspect_ratio:
+        body["aspectRatio"] = args.aspect_ratio
+    if args.max_duration_seconds > 0:
+        body["maxDurationSeconds"] = args.max_duration_seconds
+    _, payload = request_json("POST", f"{api_base}/api/h5/video-generation/optimize-prompt", body, token=token, timeout=180)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
 def select_video_model(bootstrap, series="", model_config_id="", model_selector="", mode=""):
     models = bootstrap.get("models") or []
     selected = None
@@ -703,6 +1017,12 @@ def build_video_upload_entries(args, series):
     ):
         if path:
             entries.append((field_name, path))
+    reference_file = getattr(args, "reference_file", "")
+    reference_audio = getattr(args, "reference_audio", [])
+    if reference_file:
+        entries.append(("referenceDocumentFile", reference_file))
+    audio_field = "textAudioFile" if args.mode == "t2v" else "referenceAudioFiles"
+    entries.extend((audio_field, path) for path in reference_audio)
 
     materials = []
     if args.mode == "r2v" and series in ("wanx", "kling", "seedance"):
@@ -723,6 +1043,10 @@ def validate_video_inputs(args, capability):
     series = str(capability.get("series") or "")
     image_count = len(args.reference_image)
     video_count = len(args.reference_video)
+    reference_audio = getattr(args, "reference_audio", [])
+    reference_file = getattr(args, "reference_file", "")
+    reference_link = getattr(args, "reference_link", "")
+    audio_count = len(reference_audio)
     mode_inputs = {
         "first_frame": bool(args.first_frame),
         "last_frame": bool(args.last_frame),
@@ -730,12 +1054,15 @@ def validate_video_inputs(args, capability):
         "edit_video": bool(args.edit_video),
         "reference_image": bool(args.reference_image),
         "reference_video": bool(args.reference_video),
+        "reference_audio": bool(reference_audio),
+        "reference_file": bool(reference_file),
+        "reference_link": bool(reference_link),
     }
     allowed_inputs = {
-        "t2v": set(),
+        "t2v": {"reference_audio"} if series == "wanx" else set(),
         "i2v": {"first_frame"},
         "first_last_frame": {"first_frame", "last_frame"},
-        "r2v": {"reference_image", "reference_video"},
+        "r2v": {"reference_image", "reference_video", "reference_audio", "reference_file", "reference_link"},
         "video_extend": {"extend_video"},
         "video_edit": {"edit_video", "reference_image"},
     }[args.mode]
@@ -752,8 +1079,18 @@ def validate_video_inputs(args, capability):
         raise RuntimeError("Reference image count exceeds the selected model limit")
     if video_count > int(capability.get("maxReferenceVideos") or 0):
         raise RuntimeError("Reference video count exceeds the selected model limit")
-    if args.mode == "r2v" and not image_count and not video_count:
-        raise RuntimeError("Reference-to-video mode requires at least one reference image or video")
+    if audio_count > int(capability.get("maxReferenceAudios") or 0):
+        raise RuntimeError("Reference audio count exceeds the selected model limit")
+    if reference_file and int(capability.get("maxReferenceFiles") or 0) < 1:
+        raise RuntimeError("The selected model does not support reference files")
+    if reference_link and int(capability.get("maxReferenceLinks") or 0) < 1:
+        raise RuntimeError("The selected model does not support reference links")
+    if reference_file and reference_link:
+        raise RuntimeError("Reference file and reference link cannot be used together")
+    if args.mode == "t2v" and audio_count > 1:
+        raise RuntimeError("Text-to-video accepts at most one reference audio file")
+    if args.mode == "r2v" and not image_count and not video_count and not audio_count and not reference_file and not reference_link:
+        raise RuntimeError("Reference-to-video mode requires at least one reference material")
     if series == "happyhorse" and video_count:
         raise RuntimeError("HappyHorse reference-to-video supports images only")
     if series == "kling" and video_count and image_count > 4:
@@ -798,12 +1135,22 @@ def video_generate(args):
         ("aspectRatio", aspect_ratio),
         ("trimLongMedia", "true" if args.trim_long_media else "false"),
     ]
+    model_settings = model.get("settings") or {}
+    for field_name, explicit_value, default_value in (
+        ("audio", getattr(args, "audio", None), model_settings.get("audio")),
+        ("promptExtend", getattr(args, "prompt_extend", None), model_settings.get("promptExtend")),
+        ("watermark", getattr(args, "watermark", None), model_settings.get("watermark")),
+    ):
+        if explicit_value is not None or default_value is not None:
+            fields.append((field_name, "true" if (explicit_value if explicit_value is not None else default_value) else "false"))
     if variant_key:
         fields.append(("variantKey", variant_key))
     if args.negative_prompt:
         fields.append(("negativePrompt", args.negative_prompt))
     if args.camera_fixed:
         fields.append(("cameraFixed", "true"))
+    if getattr(args, "reference_link", ""):
+        fields.append(("referenceWebLink", args.reference_link))
 
     upload_entries, materials = build_video_upload_entries(args, series)
     if materials:
@@ -847,78 +1194,115 @@ def video_generate(args):
     raise RuntimeError(f"Timed out waiting for video generation task: {task_id}")
 
 
-def long_video_project_failed(project):
-    return str(project.get("status", "")) == "failed" or any(
-        str(scene.get("status", "")) == "failed" for scene in project.get("scenes", [])
-    )
+def video_status(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/video-generations/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
 
 
-def long_video_generate(args):
+def video_download(args):
+    api_base, token = get_cli_credentials()
+    output_dir = resolve_output_dir(args.output_dir)
+    path = download_video_record(api_base, token, args.id, output_dir)
+    print(json.dumps({"id": args.id, "downloadedPath": path}, ensure_ascii=False))
+
+
+def video_package_bootstrap(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/video-packages/bootstrap", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def video_package_page(args, kind):
+    api_base, token = get_cli_credentials()
+    query = urllib.parse.urlencode({"offset": max(0, args.offset), "limit": max(1, min(50, args.limit))})
+    _, payload = request_json("GET", f"{api_base}/api/h5/video-packages/{kind}?{query}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def video_package_list(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/video-packages", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def video_package_generate(args):
     api_base, token = get_cli_credentials()
     config = load_config()
     output_dir = args.output_dir or os.environ.get("WOOBOO_OUTPUT_DIR", "") or str(config.get("output_dir", "") or "")
-    _, bootstrap = request_json("GET", f"{api_base}/api/h5/long-video/bootstrap", token=token)
-    default_variant = (bootstrap.get("model", {}).get("defaultVariant") or {})
-    variant_key = args.variant_key or str(default_variant.get("variantKey", "") or "")
-
-    fields = [
-        ("prompt", args.prompt),
-        ("aspectRatio", args.aspect_ratio),
-    ]
-    if variant_key:
-        fields.append(("variantKey", variant_key))
-    files = [("referenceFile", args.reference)]
-    if args.voice:
-        files.append(("voiceFile", args.voice))
-
-    _, created = request_multipart(f"{api_base}/api/h5/long-videos", fields, files, token, timeout=300)
-    project = created.get("item", {})
-    project_id = str(project.get("id", "") or "")
-    if not project_id:
+    _, bootstrap = request_json("GET", f"{api_base}/api/h5/video-packages/bootstrap", token=token)
+    if not bootstrap.get("ready"):
+        raise RuntimeError(str(bootstrap.get("upstreamError") or "Video packaging is not ready"))
+    style_id = args.style_id or str(((bootstrap.get("templates") or [{}])[0]).get("id") or "")
+    if not style_id:
+        raise RuntimeError("No enabled video package template is available")
+    upload = direct_upload_file(api_base, token, args.video, "video_package", "videoFile", "video/mp4")
+    try:
+        _, created = request_json(
+            "POST",
+            f"{api_base}/api/h5/video-packages",
+            {
+                "uploadId": upload["uploadId"],
+                "title": args.title,
+                "estimatedDurationSeconds": args.duration_seconds,
+                "styleId": style_id,
+                "musicId": args.music_id,
+                "identityName": args.identity_name,
+                "identityDesc": args.identity_desc,
+                "catalogRevision": bootstrap.get("catalogRevision") or "",
+            },
+            token=token,
+        )
+    except Exception:
+        delete_media_upload(api_base, token, upload["uploadId"])
+        raise
+    item = created.get("item") or {}
+    project_id = str(item.get("id") or "")
+    if not args.wait or not project_id:
         print(json.dumps(created, ensure_ascii=False))
         return
-
-    _, storyboard_payload = request_json("POST", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}/storyboards", token=token)
-    if not args.wait:
-        print(json.dumps({"item": storyboard_payload.get("item", project)}, ensure_ascii=False))
-        return
-
-    deadline = time.time() + args.storyboard_timeout
+    deadline = time.time() + args.timeout
     while time.time() < deadline:
-        _, detail = request_json("GET", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}", token=token)
-        project = detail.get("item", {})
-        if long_video_project_failed(project):
-            print(json.dumps({"item": project}, ensure_ascii=False))
+        _, detail = request_json("GET", f"{api_base}/api/h5/video-packages/{urllib.parse.quote(project_id)}", token=token)
+        item = detail.get("item") or {}
+        if item.get("status") in ("succeeded", "failed"):
+            result = {"item": item}
+            if item.get("status") == "succeeded" and output_dir:
+                result["downloadedPath"] = download_authenticated_url(
+                    f"{api_base}/api/h5/video-packages/{urllib.parse.quote(project_id)}/download",
+                    token,
+                    output_dir,
+                    project_id,
+                    ".mp4",
+                )
+            print(json.dumps(result, ensure_ascii=False))
             return
-        if str(project.get("status", "")) == "storyboard_ready" and project.get("scenes"):
-            break
         time.sleep(max(1.0, args.poll_interval))
-    else:
-        raise RuntimeError(f"Timed out waiting for long-video storyboard: {project_id}")
+    raise RuntimeError(f"Timed out waiting for video package task: {project_id}")
 
-    _, generate_payload = request_json("POST", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}/generate-all", token=token)
-    project = generate_payload.get("item", project)
-    deadline = time.time() + args.generation_timeout
-    while time.time() < deadline:
-        _, detail = request_json("GET", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}", token=token)
-        project = detail.get("item", {})
-        if long_video_project_failed(project):
-            print(json.dumps({"item": project}, ensure_ascii=False))
-            return
-        scenes = project.get("scenes", [])
-        if scenes and all(str(scene.get("status", "")) == "succeeded" for scene in scenes):
-            break
-        time.sleep(max(1.0, args.poll_interval))
-    else:
-        raise RuntimeError(f"Timed out waiting for long-video scene generation: {project_id}")
 
-    _, exported = request_json("POST", f"{api_base}/api/h5/long-videos/{urllib.parse.quote(project_id)}/export", token=token, timeout=args.export_timeout)
-    project = exported.get("item", project)
-    result = {"item": project, "export": exported.get("export", {})}
-    final_url = str(project.get("finalVideoUrl") or exported.get("export", {}).get("url") or "")
-    if final_url and output_dir:
-        result["downloadedPath"] = download_url(final_url, output_dir, project_id)
-    print(json.dumps(result, ensure_ascii=False))
+def video_package_status(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/video-packages/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def video_package_download(args):
+    api_base, token = get_cli_credentials()
+    path = download_authenticated_url(
+        f"{api_base}/api/h5/video-packages/{urllib.parse.quote(args.id)}/download",
+        token,
+        resolve_output_dir(args.output_dir),
+        args.id,
+        ".mp4",
+    )
+    print(json.dumps({"id": args.id, "downloadedPath": path}, ensure_ascii=False))
+
+
+def video_package_delete(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("DELETE", f"{api_base}/api/h5/video-packages/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload or {"ok": True}, ensure_ascii=False))
 
 
 def voice_list(_args):
@@ -935,6 +1319,12 @@ def voice_delete(args):
         token=token,
     )
     print(json.dumps(payload or {"ok": True}, ensure_ascii=False))
+
+
+def voice_status(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/digital-human/voices/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
 
 
 def voice_clone(args):
@@ -1037,12 +1427,21 @@ def avatar_delete(args):
     print(json.dumps(payload or {"ok": True}, ensure_ascii=False))
 
 
-def audio_synthesize(args):
-    raise RuntimeError(
-        "The standalone audio synthesis API has been retired. "
-        "Use `wooboo digital-human generate --drive-mode text --avatar-record-id ... "
-        "--voice-record-id ... --text ...` instead."
+def avatar_status(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/digital-human/avatars/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def avatar_voice_offer(args, action):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/h5/digital-human/avatars/{urllib.parse.quote(args.id)}/voice-offer/{action}",
+        {},
+        token=token,
     )
+    print(json.dumps(payload, ensure_ascii=False))
 
 
 def digital_human_generate(args):
@@ -1112,14 +1511,256 @@ def digital_human_generate(args):
     raise RuntimeError(f"Timed out waiting for digital human task: {task_id}")
 
 
+def digital_human_status(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/digital-human/tasks/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def digital_human_download(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/digital-human/tasks/{urllib.parse.quote(args.id)}", token=token)
+    item = payload.get("item") or {}
+    video_url = str(item.get("videoUrl") or "")
+    if item.get("status") != "succeeded" or not video_url:
+        raise RuntimeError("Digital-human video is not ready for download")
+    path = download_url(video_url, resolve_output_dir(args.output_dir), args.id)
+    print(json.dumps({"item": item, "downloadedPath": path}, ensure_ascii=False))
+
+
+def history_list(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/user/history", token=token, timeout=180)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def history_delete(args):
+    api_base, token = get_cli_credentials()
+    query = urllib.parse.urlencode({"type": args.type}) if args.type else ""
+    suffix = f"?{query}" if query else ""
+    _, payload = request_json("DELETE", f"{api_base}/api/user/history/{urllib.parse.quote(args.id)}{suffix}", token=token)
+    print(json.dumps(payload or {"ok": True}, ensure_ascii=False))
+
+
+def history_download(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/user/history", token=token, timeout=180)
+    item = next((entry for entry in payload.get("items") or [] if str(entry.get("recordId") or "") == args.id), None)
+    if not item:
+        raise RuntimeError(f"History record not found: {args.id}")
+    media_url = str(item.get("mediaUrl") or item.get("imageUrl") or item.get("coverUrl") or "")
+    if not media_url:
+        raise RuntimeError("The history record does not have a downloadable result")
+    path = download_url(media_url, resolve_output_dir(args.output_dir), args.id)
+    print(json.dumps({"item": item, "downloadedPath": path}, ensure_ascii=False))
+
+
+def favorite_list(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/favorites", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def favorite_add(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/h5/favorites",
+        {"kind": args.kind, "recordId": args.record_id},
+        token=token,
+        timeout=600,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def favorite_remove(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("DELETE", f"{api_base}/api/h5/favorites/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload or {"ok": True}, ensure_ascii=False))
+
+
+def viral_video_analyze(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("POST", f"{api_base}/api/h5/viral-video-analyses", {"url": args.url}, token=token)
+    item = payload.get("item") or {}
+    task_id = str(item.get("id") or "")
+    if not args.wait or not task_id:
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        _, detail = request_json("GET", f"{api_base}/api/h5/viral-video-analyses/{urllib.parse.quote(task_id)}", token=token)
+        item = detail.get("item") or {}
+        if item.get("status") in ("succeeded", "failed"):
+            print(json.dumps({"item": item}, ensure_ascii=False))
+            return
+        time.sleep(max(1.0, args.poll_interval))
+    raise RuntimeError(f"Timed out waiting for viral video analysis: {task_id}")
+
+
+def viral_video_query(args, latest=False):
+    api_base, token = get_cli_credentials()
+    suffix = "latest" if latest else urllib.parse.quote(args.id)
+    _, payload = request_json("GET", f"{api_base}/api/h5/viral-video-analyses/{suffix}", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def ip_clone_list(_args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/ip-clones", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def ip_clone_create(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/h5/ip-clones",
+        {"name": args.name, "companyName": args.company, "businessInfo": args.business},
+        token=token,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def ip_clone_update(args):
+    api_base, token = get_cli_credentials()
+    body = {}
+    if args.name:
+        body["name"] = args.name
+    if args.company:
+        body["companyName"] = args.company
+    if args.business:
+        body["businessInfo"] = args.business
+    if not body:
+        raise RuntimeError("Provide at least one of --name, --company, or --business")
+    _, payload = request_json("PATCH", f"{api_base}/api/h5/ip-clones/{urllib.parse.quote(args.id)}", body, token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def ip_clone_delete(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("DELETE", f"{api_base}/api/h5/ip-clones/{urllib.parse.quote(args.id)}", token=token)
+    print(json.dumps(payload or {"ok": True}, ensure_ascii=False))
+
+
+def ip_clone_upload(args):
+    api_base, token = get_cli_credentials()
+    fallback = {"photo": "image/png", "video": "video/mp4", "voice": "audio/mpeg"}[args.type]
+    upload = direct_upload_file(api_base, token, args.file, "ip_clone_asset", args.type, fallback)
+    try:
+        _, payload = request_json(
+            "POST",
+            f"{api_base}/api/h5/ip-clones/{urllib.parse.quote(args.id)}/assets/{args.type}",
+            {"uploadId": upload["uploadId"]},
+            token=token,
+            timeout=300,
+        )
+    except Exception:
+        delete_media_upload(api_base, token, upload["uploadId"])
+        raise
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def ip_clone_parse_file(args):
+    api_base, token = get_cli_credentials()
+    upload = direct_upload_file(api_base, token, args.file, "ip_clone_document", "file")
+    try:
+        _, payload = request_json(
+            "POST",
+            f"{api_base}/api/h5/ip-clones/parse-file",
+            {"uploadId": upload["uploadId"]},
+            token=token,
+            timeout=180,
+        )
+    except Exception:
+        delete_media_upload(api_base, token, upload["uploadId"])
+        raise
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def agent_bootstrap(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/agents/{urllib.parse.quote(args.code)}/bootstrap", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def agent_conversations(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/agents/{urllib.parse.quote(args.code)}/conversations", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def agent_messages(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("GET", f"{api_base}/api/h5/conversations/{urllib.parse.quote(args.conversation_id)}/messages", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def agent_clear(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json("DELETE", f"{api_base}/api/h5/agents/{urllib.parse.quote(args.code)}/conversations", token=token)
+    print(json.dumps(payload, ensure_ascii=False))
+
+
+def agent_chat(args):
+    api_base, token = get_cli_credentials()
+    if not args.text.strip() and not args.file:
+        raise RuntimeError("Agent chat requires --text or at least one --file")
+    uploads = []
+    try:
+        for path in args.file:
+            uploads.append(direct_upload_file(api_base, token, path, "agent_attachment", "files"))
+        body = {
+            "text": args.text,
+            "conversationId": args.conversation_id,
+            "ipCloneId": args.ip_clone_id,
+            "attachmentUploadIds": [item["uploadId"] for item in uploads],
+            "surface": "cli",
+        }
+        events = request_ndjson(
+            "POST",
+            f"{api_base}/api/h5/agents/{urllib.parse.quote(args.code)}/messages",
+            body,
+            token,
+            timeout=args.timeout,
+        )
+    except Exception:
+        for item in uploads:
+            delete_media_upload(api_base, token, item["uploadId"])
+        raise
+    done = next((event.get("payload") for event in reversed(events) if event.get("type") == "done"), None)
+    print(json.dumps(done or {"events": events}, ensure_ascii=False))
+
+
+def agent_cancel(args):
+    api_base, token = get_cli_credentials()
+    _, payload = request_json(
+        "POST",
+        f"{api_base}/api/h5/agents/{urllib.parse.quote(args.code)}/messages/{urllib.parse.quote(args.job_id)}/cancel",
+        {},
+        token=token,
+    )
+    print(json.dumps(payload, ensure_ascii=False))
+
+
 def main():
     args = parse_args()
     if args.command == "login" and args.login_command == "web":
         login_web(args)
     elif args.command == "logout":
         logout(args)
-    elif args.command == "account":
+    elif args.command == "account" and args.account_command in (None, "show"):
         account(args)
+    elif args.command == "account" and args.account_command == "points":
+        account_points(args)
+    elif args.command == "account" and args.account_command == "change-password":
+        account_change_password(args)
+    elif args.command == "account" and args.account_command == "bind-invitation":
+        account_bind_invitation(args)
+    elif args.command == "account" and args.account_command == "avatar":
+        account_avatar(args)
+    elif args.command == "account" and args.account_command == "redeem":
+        account_redeem(args)
     elif args.command == "config" and args.config_command == "list":
         config_list(args)
     elif args.command == "config" and args.config_command == "get":
@@ -1128,32 +1769,112 @@ def main():
         config_set(args)
     elif args.command == "config" and args.config_command == "unset":
         config_unset(args)
+    elif args.command == "content":
+        content_query(args)
     elif args.command == "image" and args.image_command == "models":
         image_models(args)
+    elif args.command == "image" and args.image_command == "history":
+        image_history(args)
     elif args.command == "image" and args.image_command == "generate":
         image_generate(args)
+    elif args.command == "image" and args.image_command == "status":
+        image_status(args)
+    elif args.command == "image" and args.image_command == "download":
+        image_download(args)
     elif args.command == "video" and args.video_command == "models":
         video_models(args)
+    elif args.command == "video" and args.video_command == "optimize-prompt":
+        video_optimize_prompt(args)
     elif args.command == "video" and args.video_command == "generate":
         video_generate(args)
-    elif args.command == "long-video" and args.long_video_command == "generate":
-        long_video_generate(args)
+    elif args.command == "video" and args.video_command == "status":
+        video_status(args)
+    elif args.command == "video" and args.video_command == "download":
+        video_download(args)
+    elif args.command == "video-package" and args.video_package_command == "bootstrap":
+        video_package_bootstrap(args)
+    elif args.command == "video-package" and args.video_package_command == "templates":
+        video_package_page(args, "templates")
+    elif args.command == "video-package" and args.video_package_command == "music":
+        video_package_page(args, "music")
+    elif args.command == "video-package" and args.video_package_command == "list":
+        video_package_list(args)
+    elif args.command == "video-package" and args.video_package_command == "generate":
+        video_package_generate(args)
+    elif args.command == "video-package" and args.video_package_command == "status":
+        video_package_status(args)
+    elif args.command == "video-package" and args.video_package_command == "download":
+        video_package_download(args)
+    elif args.command == "video-package" and args.video_package_command == "delete":
+        video_package_delete(args)
     elif args.command == "voice" and args.voice_command == "list":
         voice_list(args)
     elif args.command == "voice" and args.voice_command == "clone":
         voice_clone(args)
     elif args.command == "voice" and args.voice_command == "delete":
         voice_delete(args)
+    elif args.command == "voice" and args.voice_command == "status":
+        voice_status(args)
     elif args.command == "avatar" and args.avatar_command == "list":
         avatar_list(args)
     elif args.command == "avatar" and args.avatar_command == "create":
         avatar_create(args)
     elif args.command == "avatar" and args.avatar_command == "delete":
         avatar_delete(args)
-    elif args.command == "audio" and args.audio_command == "synthesize":
-        audio_synthesize(args)
+    elif args.command == "avatar" and args.avatar_command == "status":
+        avatar_status(args)
+    elif args.command == "avatar" and args.avatar_command == "accept-voice-offer":
+        avatar_voice_offer(args, "accept")
+    elif args.command == "avatar" and args.avatar_command == "dismiss-voice-offer":
+        avatar_voice_offer(args, "dismiss")
     elif args.command == "digital-human" and args.human_command == "generate":
         digital_human_generate(args)
+    elif args.command == "digital-human" and args.human_command == "status":
+        digital_human_status(args)
+    elif args.command == "digital-human" and args.human_command == "download":
+        digital_human_download(args)
+    elif args.command == "history" and args.history_command == "list":
+        history_list(args)
+    elif args.command == "history" and args.history_command == "delete":
+        history_delete(args)
+    elif args.command == "history" and args.history_command == "download":
+        history_download(args)
+    elif args.command == "favorite" and args.favorite_command == "list":
+        favorite_list(args)
+    elif args.command == "favorite" and args.favorite_command == "add":
+        favorite_add(args)
+    elif args.command == "favorite" and args.favorite_command == "remove":
+        favorite_remove(args)
+    elif args.command == "viral-video" and args.viral_command == "analyze":
+        viral_video_analyze(args)
+    elif args.command == "viral-video" and args.viral_command == "latest":
+        viral_video_query(args, latest=True)
+    elif args.command == "viral-video" and args.viral_command == "status":
+        viral_video_query(args)
+    elif args.command == "ip-clone" and args.ip_clone_command == "list":
+        ip_clone_list(args)
+    elif args.command == "ip-clone" and args.ip_clone_command == "create":
+        ip_clone_create(args)
+    elif args.command == "ip-clone" and args.ip_clone_command == "update":
+        ip_clone_update(args)
+    elif args.command == "ip-clone" and args.ip_clone_command == "delete":
+        ip_clone_delete(args)
+    elif args.command == "ip-clone" and args.ip_clone_command == "upload":
+        ip_clone_upload(args)
+    elif args.command == "ip-clone" and args.ip_clone_command == "parse-file":
+        ip_clone_parse_file(args)
+    elif args.command == "agent" and args.agent_command == "bootstrap":
+        agent_bootstrap(args)
+    elif args.command == "agent" and args.agent_command == "conversations":
+        agent_conversations(args)
+    elif args.command == "agent" and args.agent_command == "messages":
+        agent_messages(args)
+    elif args.command == "agent" and args.agent_command == "clear":
+        agent_clear(args)
+    elif args.command == "agent" and args.agent_command == "chat":
+        agent_chat(args)
+    elif args.command == "agent" and args.agent_command == "cancel":
+        agent_cancel(args)
     else:
         raise RuntimeError("Unsupported command")
 

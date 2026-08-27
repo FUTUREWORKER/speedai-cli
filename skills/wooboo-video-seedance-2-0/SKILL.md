@@ -72,7 +72,7 @@ wooboo video generate \
 ## 参数约定
 
 - `--series seedance`：固定使用 Seedance 2.0 系列。
-- `--mode`：常用 `t2v`、`i2v`、`r2v`。
+- `--mode`：后端当前可提供 `t2v`、`i2v`、`r2v`、`video_extend`、`video_edit`；以 `wooboo video models` 返回能力为准。
 - `--aspect-ratio`：支持 `adaptive`、`9:16`、`16:9`、`1:1`、`3:4`、`4:3`。
 - `--camera-fixed`：需要固定镜头时使用。
 - `--reference-image` / `--reference-video`：`r2v` 模式至少提供 1 个参考素材；Seedance 当前不使用音频或音色参考。

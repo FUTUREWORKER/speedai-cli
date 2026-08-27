@@ -55,6 +55,9 @@ def video_model(model_id, series, modes, model_name=None):
             "modes": modes,
             "maxReferenceImages": 7 if series == "kling" else 5,
             "maxReferenceVideos": 1 if series in ("kling", "seedance") else 5,
+            "maxReferenceAudios": 5 if (model_name or "").startswith("wan3.0-") else 0,
+            "maxReferenceFiles": 1 if (model_name or "").startswith("wan3.0-") else 0,
+            "maxReferenceLinks": 1 if (model_name or "").startswith("wan3.0-") else 0,
         },
         "variants": [variant],
         "defaultVariant": variant,
@@ -401,19 +404,82 @@ class CommandContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "does not accept: first_frame"):
             cli.validate_video_inputs(args, capability)
 
-    def test_retired_audio_command_fails_explicitly(self):
-        with self.assertRaisesRegex(RuntimeError, "retired"):
-            cli.audio_synthesize(SimpleNamespace())
+    def test_retired_commands_are_removed(self):
+        for command in ("audio", "long-video"):
+            result = subprocess.run(
+                [sys.executable, str(Path(cli.__file__).resolve()), command],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("invalid choice", result.stderr)
 
-    def test_retired_audio_cli_has_nonzero_exit_code(self):
-        result = subprocess.run(
-            [sys.executable, str(Path(cli.__file__).resolve()), "audio", "synthesize"],
-            capture_output=True,
-            text=True,
-            check=False,
+    def test_wan3_supports_audio_and_document_references(self):
+        model = video_model("wan3-model", "wanx", ["r2v", "t2v"], "wan3.0-video")
+        model["settings"] = {"audio": True, "promptExtend": False, "watermark": False}
+        model["capability"]["durationConstraints"] = {"r2v": {"min": 2, "max": 30}}
+        args = SimpleNamespace(
+            series="wanx", model="", model_config_id="", mode="r2v", prompt="全能参考",
+            aspect_ratio="16:9", duration_seconds=15, resolution="", variant_key="",
+            first_frame="", last_frame="", extend_video="", edit_video="",
+            reference_image=["image.png"], reference_video=["video.mp4"],
+            reference_audio=["voice.mp3"], reference_file="brief.pdf", reference_link="",
+            negative_prompt="", audio=None, prompt_extend=None, watermark=None,
+            camera_fixed=False, trim_long_media=False, wait=False, poll_interval=1,
+            timeout=10, output_dir="",
         )
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("retired", result.stderr)
+        uploads = iter([
+            {"uploadId": "document", "fieldName": "referenceDocumentFile"},
+            {"uploadId": "audio", "fieldName": "referenceAudioFiles"},
+            {"uploadId": "image", "fieldName": "wanxR2vMediaFiles"},
+            {"uploadId": "video", "fieldName": "wanxR2vMediaFiles"},
+        ])
+        captured = {}
+
+        def request_multipart(url, fields, files, token, timeout=60):
+            captured.update({"fields": dict(fields), "files": files})
+            return 202, {"task": {"taskId": "task-id", "taskStatus": "生成中"}}
+
+        with mock.patch.object(cli, "get_cli_credentials", return_value=("https://api.example", "token")), mock.patch.object(cli, "load_config", return_value={}), mock.patch.object(cli, "fetch_video_bootstrap", return_value={"models": [model]}), mock.patch.object(cli, "direct_upload_file", side_effect=lambda *args, **kwargs: next(uploads)), mock.patch.object(cli, "request_multipart", side_effect=request_multipart), mock.patch("sys.stdout", new_callable=io.StringIO):
+            cli.video_generate(args)
+        manifest = json.loads(captured["fields"]["mediaUploads"])
+        self.assertEqual([item["fieldName"] for item in manifest], [
+            "referenceDocumentFile", "referenceAudioFiles", "wanxR2vMediaFiles", "wanxR2vMediaFiles",
+        ])
+        self.assertEqual(captured["fields"]["audio"], "true")
+
+    def test_video_package_submits_current_catalog_revision(self):
+        args = SimpleNamespace(
+            video="source.mp4", title="标题", duration_seconds=12.5, style_id="",
+            music_id="music-id", identity_name="主理人", identity_desc="产品顾问",
+            wait=False, poll_interval=1, timeout=10, output_dir="",
+        )
+        captured = {}
+
+        def request_json(method, url, payload=None, token="", timeout=30, extra_headers=None):
+            if url.endswith("/bootstrap"):
+                return 200, {"ready": True, "catalogRevision": "revision-1", "templates": [{"id": "style-id"}]}
+            captured.update({"method": method, "url": url, "payload": payload})
+            return 202, {"item": {"id": "package-id", "status": "preprocessing"}}
+
+        with mock.patch.object(cli, "get_cli_credentials", return_value=("https://api.example", "token")), mock.patch.object(cli, "load_config", return_value={}), mock.patch.object(cli, "direct_upload_file", return_value={"uploadId": "upload-id"}), mock.patch.object(cli, "request_json", side_effect=request_json), mock.patch("sys.stdout", new_callable=io.StringIO):
+            cli.video_package_generate(args)
+        self.assertEqual(captured["payload"]["styleId"], "style-id")
+        self.assertEqual(captured["payload"]["catalogRevision"], "revision-1")
+        self.assertEqual(captured["payload"]["estimatedDurationSeconds"], 12.5)
+
+    def test_agent_chat_uploads_attachments_and_returns_done_payload(self):
+        args = SimpleNamespace(
+            code="creative-agent", text="生成脚本", conversation_id="conversation-id",
+            ip_clone_id="clone-id", file=["brief.docx"], timeout=30,
+        )
+        events = [{"type": "done", "payload": {"conversation": {"id": "conversation-id"}, "assistantMessage": {"content": "完成"}}}]
+        with mock.patch.object(cli, "get_cli_credentials", return_value=("https://api.example", "token")), mock.patch.object(cli, "direct_upload_file", return_value={"uploadId": "file-upload"}) as upload, mock.patch.object(cli, "request_ndjson", return_value=events) as stream, mock.patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            cli.agent_chat(args)
+        upload.assert_called_once_with("https://api.example", "token", "brief.docx", "agent_attachment", "files")
+        self.assertEqual(stream.call_args.args[2]["attachmentUploadIds"], ["file-upload"])
+        self.assertEqual(json.loads(stdout.getvalue())["assistantMessage"]["content"], "完成")
 
 
 class DistributionMetadataTests(unittest.TestCase):
@@ -464,6 +530,8 @@ class DistributionMetadataTests(unittest.TestCase):
         skill_directories = sorted(path for path in skills_root.iterdir() if path.is_dir())
         self.assertTrue(skill_directories)
         self.assertFalse((skills_root / "wooboo-audio-synthesis").exists())
+        self.assertFalse((skills_root / "wooboo-long-video-creation").exists())
+        self.assertFalse((skills_root / "wooboo-video-wanx-2-7").exists())
         for directory in skill_directories:
             skill_path = directory / "SKILL.md"
             self.assertTrue(skill_path.is_file(), f"missing {skill_path}")
@@ -479,7 +547,11 @@ class DistributionMetadataTests(unittest.TestCase):
         for command in (
             "wooboo image models",
             "wooboo video models",
-            "--series kling",
+            "--model wan3.0-video",
+            "wooboo video-package generate",
+            "wooboo agent chat creative-agent",
+            "wooboo ip-clone create",
+            "wooboo viral-video analyze",
             "wooboo avatar create",
             "wooboo digital-human generate",
         ):

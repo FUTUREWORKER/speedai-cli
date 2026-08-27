@@ -73,7 +73,7 @@ wooboo video generate `
 ## 参数约定
 
 - `--series happyhorse`：固定使用快乐马系列。
-- `--mode`：常用 `t2v`、`i2v`、`r2v`。
+- `--mode`：常用 `t2v`、`i2v`、`r2v`；部分启用模型还支持 `video_edit`，以 `wooboo video models` 返回能力为准。
 - `--reference-image`：快乐马参考生视频只使用图片参考，不使用视频或音频参考。
 - `--aspect-ratio`：常用 `9:16`、`16:9`、`1:1`。
 - `--duration-seconds`：常用 5 秒，按系统返回的模型限制为准。

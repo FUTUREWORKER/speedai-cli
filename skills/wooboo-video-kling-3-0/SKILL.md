@@ -7,6 +7,8 @@ description: Generate Kling 3.0 videos through the Wooboo AI system with user au
 
 Use `wooboo video generate --series kling`. Do not call Kling or another upstream provider directly.
 
+The current backend can expose `t2v`, `i2v`, `first_last_frame`, `r2v`, and `video_edit`. Run `wooboo video models` and use only modes and duration limits returned for the selected model.
+
 Text to video:
 
 ```bash
@@ -16,6 +18,8 @@ wooboo video generate \
   --prompt "电影感品牌短片，镜头缓慢推进，产品主体稳定" \
   --duration-seconds 5
 ```
+
+For image-to-video use `--mode i2v --first-frame`; for first/last frame use `--mode first_last_frame --first-frame ... --last-frame ...`; for editing use `--mode video_edit --edit-video ...` and optional reference images.
 
 Reference generation with mixed local media:
 
