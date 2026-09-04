@@ -1,6 +1,6 @@
 # Wooboo AI CLI
 
-`wooboo` 是挖宝AI（Wooboo AI）的本地命令行入口。它使用用户网页登录授权后的平台 token，不直连模型供应商；积分扣除、退款、任务队列、OSS 存储和创作历史都由 Wooboo AI 统一处理。
+`wooboo` 是挖宝AI（Wooboo AI）的本地命令行入口。用户通过网页登录后，即可在本机调用图片、视频、数字人和创作 Agent 等功能。
 
 CLI 只有一个版本，通过配置切换环境。默认生产地址为 `https://wooboo.ycszai.com`，本机凭据保存在 `~/.wooboo-ai/credentials.json`。
 
@@ -37,23 +37,22 @@ CLI 执行平台命令，Agent skill 告诉 Codex、OpenClaw、Hermes 等 Agent 
 
 ```bash
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-image-generation
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill gpt-image-2-image-generation
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-wan3
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-seedance-2-0
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-happyhorse
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-kling-3-0
+npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-shanying
+npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-lingguang
+npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-suying-2-5-flash
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-video-package
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-digital-human-avatar
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-voice-clone
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-voice-list
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-digital-human-video
 npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-creative-agent
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-ip-clone
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-viral-video-analysis
-npx -y skills add FUTUREWORKER/wooboo-ai-cli --skill wooboo-history-favorites
 ```
 
 也可以把 `skills/<skill-name>` 整个目录复制到目标 Agent 的 skill/instruction 目录。仓库里的 skill 是 Agent 通用格式，不依赖 Codex 专属目录。
+
+Skill 全程使用挖宝AI系统名称：图片使用“专业模型”“标准模型”“基础模型”，视频使用“闪影”“灵光”“速影 2.5 Flash”。IP 分身、爆款视频拆解、历史和收藏仍可直接通过 CLI 使用，但不再提供独立 Agent Skill。
+
+各 Skill 会先从用户消息、对话上下文和附件中补全参数。只有缺少无法推断且会阻止任务提交的必要信息时才向用户追问；可选参数或已有默认值的参数不会逐项询问，同时缺少多个必要信息时会合并成一次简短提问。
 
 ## 登录与配置
 
@@ -78,49 +77,48 @@ wooboo config list
 
 ```bash
 wooboo image models
-wooboo image generate --prompt "高级棚拍产品图，电影感灯光"
+wooboo image generate --model "专业模型" --prompt "高级棚拍产品图，电影感灯光"
 ```
+
+图片生成支持“专业模型”“标准模型”“基础模型”。未指定时按专业模型处理；需要切换时使用 `--model "标准模型"` 或 `--model "基础模型"`。
 
 参考图生成或改图：
 
 ```bash
 wooboo image generate \
-  --model gpt-image-2 \
+  --model "专业模型" \
   --prompt "保留主体，改成日落海边广告大片" \
   --reference-image ./product.png \
   --aspect-ratio 16:9 \
   --quality 2k
 ```
 
-不指定模型、档位、比例或质量时，CLI 使用服务端当前启用的默认值。
+Skill 在用户未指定模型时会显式选择“专业模型”；未指定档位、比例或质量时，CLI 使用该系统模型的当前默认值。
 
 ## 普通视频创作
 
 ```bash
 wooboo video models
-wooboo video optimize-prompt --series wanx --mode t2v --prompt "未来城市夜景"
+wooboo video optimize-prompt --series "闪影" --mode t2v --prompt "未来城市夜景"
 ```
 
 CLI 支持服务端按模型动态开放的 `t2v`、`i2v`、`first_last_frame`、`r2v`、`video_extend` 和 `video_edit`。
 
-Wan3 文生视频：
+闪影文生视频：
 
 ```bash
 wooboo video generate \
-  --series wanx \
-  --model wan3.0-video \
+  --series "闪影" \
   --mode t2v \
   --prompt "电影感城市夜景，镜头缓慢推进" \
-  --duration-seconds 10 \
-  --resolution 720P
+  --duration-seconds 10
 ```
 
-Wan3 全能参考：
+闪影全能参考：
 
 ```bash
 wooboo video generate \
-  --series wanx \
-  --model wan3.0-video-prime \
+  --series "闪影" \
   --mode r2v \
   --prompt "参考人物、动作和旁白节奏生成品牌短片" \
   --reference-image ./person.png \
@@ -130,7 +128,17 @@ wooboo video generate \
   --audio
 ```
 
-Wan3 还支持一个 `--reference-file` 或一个 `--reference-link`，两者不能同时使用。素材数量、格式、时长、输出时长和分辨率以 `wooboo video models` 返回能力为准。
+速影 2.5 Flash 文生视频：
+
+```bash
+wooboo video generate \
+  --model "速影 2.5 Flash" \
+  --mode t2v \
+  --prompt "电影感产品广告，柔和灯光扫过主体" \
+  --duration-seconds 5
+```
+
+闪影还支持一个 `--reference-file` 或一个 `--reference-link`，两者不能同时使用。素材数量、格式、时长、输出时长和分辨率以 `wooboo video models` 返回能力为准。
 
 ```bash
 wooboo video status <task-id>
@@ -158,7 +166,7 @@ wooboo video-package generate \
   --identity-desc "AI产品顾问"
 ```
 
-还支持 `video-package list|status|download|delete`。旧长视频功能已由父项目永久下线，CLI 不再提供 `long-video`。
+还支持 `video-package list|status|download|delete`。
 
 ## 数字人
 
@@ -184,8 +192,6 @@ wooboo digital-human generate \
   --drive-mode audio \
   --audio ./speech.mp3
 ```
-
-独立语音合成接口和 `audio synthesize` 命令已经下线。
 
 ## 创作 Agent
 
@@ -249,10 +255,8 @@ wooboo account redeem <recharge-card-code>
 wooboo account change-password --old-password <old> --new-password <new>
 ```
 
-## 重要约束
+## 使用边界
 
-- CLI 是系统功能入口，不是模型供应商直连工具。
-- CLI 不保存供应商 API Key，不绕过积分、退款、任务队列或创作历史。
-- 本地素材优先通过平台签名 URL 直传 OSS。
-- 用户 token 只保存在本机 `~/.wooboo-ai/credentials.json`。
-- CLI 不包含 Admin 管理后台和 PC 画布管理命令；这两类能力使用独立权限和交互边界。
+- 创作功能使用当前登录的挖宝AI账户。
+- 登录凭据保存在本机 `~/.wooboo-ai/credentials.json`。
+- CLI 不包含 Admin 管理后台和 PC 画布管理命令。

@@ -78,6 +78,17 @@ class ModelSelectionTests(unittest.TestCase):
         selected = cli.select_video_model({"models": [t2v, r2v]}, series="wanx", mode="r2v")
         self.assertEqual(selected["id"], "wanx-r2v")
 
+    def test_video_selection_accepts_system_series_name(self):
+        model = video_model("lingguang-r2v", "happyhorse", ["r2v"])
+        bootstrap = {
+            "models": [model],
+            "seriesConfigs": [
+                {"seriesKey": "happyhorse", "displayName": "灵光"},
+            ],
+        }
+        selected = cli.select_video_model(bootstrap, series="灵光", mode="r2v")
+        self.assertIs(selected, model)
+
     def test_explicit_unavailable_video_resolution_is_rejected(self):
         model = video_model("wanx-t2v", "wanx", ["t2v"])
         with self.assertRaisesRegex(RuntimeError, "resolution is not available"):
@@ -528,10 +539,22 @@ class DistributionMetadataTests(unittest.TestCase):
         root = Path(cli.__file__).resolve().parent
         skills_root = root / "skills"
         skill_directories = sorted(path for path in skills_root.iterdir() if path.is_dir())
-        self.assertTrue(skill_directories)
-        self.assertFalse((skills_root / "wooboo-audio-synthesis").exists())
-        self.assertFalse((skills_root / "wooboo-long-video-creation").exists())
-        self.assertFalse((skills_root / "wooboo-video-wanx-2-7").exists())
+        expected_skills = {
+            "wooboo-creative-agent",
+            "wooboo-digital-human-avatar",
+            "wooboo-digital-human-video",
+            "wooboo-image-generation",
+            "wooboo-video-lingguang",
+            "wooboo-video-package",
+            "wooboo-video-shanying",
+            "wooboo-video-suying-2-5-flash",
+            "wooboo-voice-clone",
+            "wooboo-voice-list",
+        }
+        self.assertEqual({path.name for path in skill_directories}, expected_skills)
+        readme = (root / "README.md").read_text(encoding="utf-8")
+        for skill_name in expected_skills:
+            self.assertIn(f"--skill {skill_name}", readme)
         for directory in skill_directories:
             skill_path = directory / "SKILL.md"
             self.assertTrue(skill_path.is_file(), f"missing {skill_path}")
@@ -540,6 +563,43 @@ class DistributionMetadataTests(unittest.TestCase):
             match = re.search(r"^name:\s*(\S+)\s*$", content, re.MULTILINE)
             self.assertIsNotNone(match, f"missing skill name in {skill_path}")
             self.assertEqual(match.group(1), directory.name)
+            description = re.search(r"^description:\s*(.+)\s*$", content, re.MULTILINE)
+            self.assertIsNotNone(description, f"missing skill description in {skill_path}")
+            self.assertRegex(description.group(1), r"[\u4e00-\u9fff]", f"skill description must be Chinese: {skill_path}")
+
+        for directory in skill_directories:
+            if not directory.name.startswith("wooboo-video-") or directory.name == "wooboo-video-package":
+                continue
+            content = (directory / "SKILL.md").read_text(encoding="utf-8").casefold()
+            for provider_model_name in (
+                "wan3.0-video",
+                "kling-v3-omni-video-generation",
+                "doubao-seedance-2-0-260128",
+                "agnes-video-2.5-flash",
+            ):
+                self.assertNotIn(provider_model_name, content)
+
+        for directory in skill_directories:
+            content = (directory / "SKILL.md").read_text(encoding="utf-8").casefold()
+            for implementation_term in (
+                "底层模型",
+                "供应商",
+                "直连",
+                "ndjson",
+                "payment_pending",
+                "migration_pending",
+                "catalog revision",
+                "server-side",
+                "backward-compatible",
+                "retired",
+                "audiourl",
+                "oss",
+                "task queues",
+                "creation history",
+                "bypass",
+                "不得绕过",
+            ):
+                self.assertNotIn(implementation_term, content)
 
     def test_readme_documents_new_workflows(self):
         root = Path(cli.__file__).resolve().parent
@@ -547,7 +607,8 @@ class DistributionMetadataTests(unittest.TestCase):
         for command in (
             "wooboo image models",
             "wooboo video models",
-            "--model wan3.0-video",
+            '--model "专业模型"',
+            '--model "速影 2.5 Flash"',
             "wooboo video-package generate",
             "wooboo agent chat creative-agent",
             "wooboo ip-clone create",

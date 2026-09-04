@@ -1,19 +1,28 @@
 ---
 name: wooboo-digital-human-video
-description: Generate a Wooboo AI digital-human video from a trained avatar using either text plus a cloned voice or a local drive-audio file.
+description: 使用已训练的数字人形象生成视频，支持“文字加克隆音色”和“本地音频驱动”两种方式。
 ---
 
-# Wooboo AI Digital Human Video
+# 挖宝AI数字人视频
 
-Use `wooboo` so authorization, points billing, OSS storage, task queues, and creation history remain inside the platform. This is an Agent-agnostic skill.
+使用 `wooboo digital-human generate` 生成数字人视频。
 
-## Prerequisites
+## 参数补全与追问
 
-- A ready avatar record from `wooboo avatar list` or `wooboo avatar create`.
-- Text mode: a ready voice record from `wooboo voice list`.
-- Audio mode: a local audio file.
+- 先根据用户提供的是文字还是音频判断驱动方式；两者都没有且无法从上下文判断时，询问用户要使用文字驱动还是音频驱动。
+- 必须确定一个可用的数字人形象。先运行 `wooboo avatar list`；只有一个可用形象时直接使用，存在多个且无法从用户要求中确定时请用户选择，没有可用形象时请用户先提供训练视频创建形象。
+- 文字驱动必须有播报文字和可用音色。先运行 `wooboo voice list`；只有一个可用音色时直接使用，存在多个且无法确定时请用户选择，没有可用音色时请用户先提供语音样本克隆音色。
+- 音频驱动必须有可访问的本地音频；缺少时请用户提供。
+- 标题、字幕设置和输出目录不是阻塞参数；用户未指定时使用当前默认值。
+- 如果同时缺少多个必要信息，合并成一次简短提问。
 
-## Text drive
+## 准备素材
+
+- 先通过 `wooboo avatar list` 选择可用的数字人形象。
+- 文字驱动需要选择一个可用音色。
+- 音频驱动需要提供本地音频文件。
+
+## 文字驱动
 
 ```bash
 wooboo digital-human generate \
@@ -25,7 +34,7 @@ wooboo digital-human generate \
   --output-dir ./generated-videos
 ```
 
-## Audio drive
+## 音频驱动
 
 ```bash
 wooboo digital-human generate \
@@ -36,6 +45,4 @@ wooboo digital-human generate \
   --output-dir ./generated-videos
 ```
 
-The CLI waits through `queued`, `running`, and `payment_pending`, then returns `succeeded` or `failed`. Report the task ID, billing state, points cost, video URL, and downloaded path.
-
-Do not use the retired `wooboo audio synthesize` workflow, old `--image`, or external `audioUrl` parameters.
+完成后报告任务 ID、状态、视频地址和本地下载路径；失败时直接反馈挖宝AI返回的错误。

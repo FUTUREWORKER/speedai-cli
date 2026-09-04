@@ -1,19 +1,25 @@
 ---
 name: wooboo-voice-clone
-description: Clone a reusable voice through the Wooboo AI system with user authorization, points billing, OSS direct upload, and task tracking.
+description: 通过挖宝AI使用本地语音样本克隆可复用音色，并获得用于数字人视频的音色记录。
 ---
 
-# Wooboo AI Voice Clone
+# 挖宝AI音色克隆
 
-Use the `wooboo` CLI as the system entrypoint. This skill is Agent-agnostic and works with Codex, OpenClaw, Hermes, or any Agent that can run local commands.
+使用 `wooboo voice clone` 提交本地语音样本。
 
-## Required flow
+## 参数补全与追问
 
-1. Ensure `wooboo` is installed.
-2. If authorization is missing, run `wooboo login web --open`.
-3. Run `wooboo voice clone` with a local speech sample.
-4. Wait for `cloneStatus` to become `ready`, `failed`, or `migration_pending`.
-5. Report `item.id`; digital-human text drive uses it as `--voice-record-id`.
+- 克隆音色必须有可访问的本地语音样本；用户没有提供时，先请用户提供音频。
+- 用户未指定音色名称时使用“我的音色”，不要为名称单独追问。
+- 语言能够从用户要求或语音用途中明确判断时直接填写；无法判断时使用当前默认值，不为此阻塞提交。
+- 如果同时缺少多个必要信息，合并成一次简短提问。
+
+## 使用流程
+
+1. 未登录时运行 `wooboo login web --open`。
+2. 使用清晰的本地语音样本创建音色。
+3. 等待克隆完成。
+4. 返回音色名称和记录 ID；生成数字人视频时把该 ID 传给 `--voice-record-id`。
 
 ```bash
 wooboo voice clone \
@@ -22,7 +28,7 @@ wooboo voice clone \
   --language zh
 ```
 
-Windows PowerShell:
+Windows PowerShell：
 
 ```powershell
 wooboo voice clone `
@@ -31,4 +37,4 @@ wooboo voice clone `
   --language zh
 ```
 
-`--prefix` is a backward-compatible alias for `--name`. Do not use or request upstream provider credentials. If the system returns an error, surface it instead of bypassing Wooboo AI.
+失败时直接反馈挖宝AI返回的错误。

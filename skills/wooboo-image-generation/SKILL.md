@@ -1,30 +1,54 @@
 ---
 name: wooboo-image-generation
-description: Generate or edit images with any enabled Wooboo AI image model through user authorization, dynamic model configuration, points billing, OSS storage, and creation history.
+description: 通过挖宝AI生成或编辑图片，支持“专业模型”“标准模型”“基础模型”三种系统模型；用户未指定时默认使用专业模型。
 ---
 
-# Wooboo AI Image Generation
+# 挖宝AI图片生成
 
-Use the `wooboo` CLI instead of calling an image-model provider directly. This skill is compatible with Codex, OpenClaw, Hermes, and other command-capable Agents.
+使用 `wooboo` CLI 完成挖宝AI图片创作。本 Skill 兼容 Codex、OpenClaw、Hermes 等能够执行本机命令的 Agent。
 
-1. Run `wooboo image models` when the requested model or supported specification is unclear.
-2. If authorization is missing, run `wooboo login web --open`.
-3. Submit a new task for every new generation request.
-4. Omit quality and aspect ratio unless the user specifies them; the CLI will use the selected model's current default variant.
+## 参数补全与追问
 
-```bash
-wooboo image generate --prompt "高级棚拍产品图，主体清晰，电影感灯光"
-```
+- 先从用户消息、对话上下文和已提供的附件中提取参数；能够安全推断时直接使用，不重复询问。
+- 生成或编辑图片必须有明确的画面要求。用户没有说明要生成什么时，先追问创作内容。
+- 用户要求参考图生成或修改已有图片，但没有提供可访问的参考图片时，先请用户提供图片。
+- 用户未指定模型时直接使用“专业模型”，不要追问模型选择。
+- 画质、比例、档位和输出目录不是阻塞参数；用户未指定时使用当前默认值。
+- 如果同时缺少多个必要信息，合并成一次简短提问。
 
-With an explicit model and reference image:
+## 模型选择
+
+- 用户没有指定模型时，使用“专业模型”。
+- 用户明确要求“标准模型”或“基础模型”时，按用户选择执行。
+- 模型是否启用或支持哪些规格不明确时，先运行 `wooboo image models`，以平台当前返回结果为准。
+- 选择模型时只使用“专业模型”“标准模型”“基础模型”三个系统名称。
+
+默认使用专业模型：
 
 ```bash
 wooboo image generate \
-  --model gpt-image-2 \
+  --model "专业模型" \
+  --prompt "高级棚拍产品图，主体清晰，电影感灯光"
+```
+
+使用标准模型或基础模型：
+
+```bash
+wooboo image generate --model "标准模型" --prompt "自然光下的生活方式产品图"
+wooboo image generate --model "基础模型" --prompt "简洁明亮的电商产品主图"
+```
+
+参考图生成或改图：
+
+```bash
+wooboo image generate \
+  --model "专业模型" \
   --prompt "保留主体，把场景改成高级摄影棚" \
   --reference-image /path/to/reference.png \
   --aspect-ratio 1:1 \
   --output-dir ./generated-images
 ```
 
-Report the record ID, final status, selected model/quality, image URL, and downloaded path. Never bypass platform points or history.
+未授权时运行 `wooboo login web --open`。每个新的生成请求都必须提交新任务。用户没有指定画质、比例或档位时不要主动填写，让平台使用所选系统模型的当前默认配置。
+
+完成后报告记录 ID、最终状态、系统模型名称、画质、图片地址和本地下载路径；失败时直接反馈挖宝AI返回的错误。

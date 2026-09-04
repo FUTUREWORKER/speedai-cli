@@ -110,8 +110,8 @@ def parse_args():
     video_optimize.add_argument("--has-video-reference", action=argparse.BooleanOptionalAction, default=False)
     video_optimize.add_argument("--material", action="append", default=[], help="Material as kind:role, for example image:reference or audio:voice.")
     video_generate_parser = video_sub.add_parser("generate")
-    video_generate_parser.add_argument("--series", default="", help="Video series such as wanx, seedance, happyhorse, or kling.")
-    video_generate_parser.add_argument("--model", default="", help="Model display name or provider model name.")
+    video_generate_parser.add_argument("--series", default="", help="System video series name returned by 'wooboo video models'.")
+    video_generate_parser.add_argument("--model", default="", help="System model display name.")
     video_generate_parser.add_argument("--prompt", required=True)
     video_generate_parser.add_argument("--mode", default="t2v", choices=["t2v", "i2v", "first_last_frame", "r2v", "video_extend", "video_edit"])
     video_generate_parser.add_argument("--aspect-ratio", default="")
@@ -952,7 +952,27 @@ def video_optimize_prompt(args):
     print(json.dumps(payload, ensure_ascii=False))
 
 
+def resolve_video_series(bootstrap, selector):
+    normalized = str(selector or "").strip().casefold()
+    if not normalized:
+        return ""
+    for item in bootstrap.get("seriesConfigs") or []:
+        series_key = str(item.get("seriesKey") or "").strip()
+        if normalized in {
+            series_key.casefold(),
+            str(item.get("displayName") or "").strip().casefold(),
+        }:
+            return series_key
+    public_name_fallbacks = {
+        "闪影": "wanx",
+        "灵光": "happyhorse",
+        "速影": "agnes",
+    }
+    return public_name_fallbacks.get(normalized, str(selector or "").strip())
+
+
 def select_video_model(bootstrap, series="", model_config_id="", model_selector="", mode=""):
+    series = resolve_video_series(bootstrap, series)
     models = bootstrap.get("models") or []
     selected = None
     if model_config_id:
